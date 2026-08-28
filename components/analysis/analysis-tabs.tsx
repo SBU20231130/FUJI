@@ -8,34 +8,28 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { USER_MENU } from '@/lib/menu';
 
-const tabs: { href: string; label: string; ready: boolean }[] = [
-  { href: '/analysis/leadtime', label: '리드타임 격차', ready: true },
-  { href: '/analysis/stockout', label: '재고 소진 위험', ready: false },
-];
+const tabs = USER_MENU.find((group) => group.id === 'analysis')?.items ?? [];
 
 export default function AnalysisTabs() {
   const pathname = usePathname();
 
   return (
     <nav className="analysis-tabs" aria-label="분석 화면">
-      {tabs.map((tab) =>
-        tab.ready ? (
+      {tabs.map((tab) => {
+        const active = pathname === tab.href;
+        return (
           <Link
-            key={tab.href}
+            key={tab.id}
             href={tab.href}
-            className={`analysis-tab ${pathname === tab.href ? 'active' : ''}`}
-            aria-current={pathname === tab.href ? 'page' : undefined}
+            className={`analysis-tab ${active ? 'active' : ''}`}
+            aria-current={active ? 'page' : undefined}
           >
             {tab.label}
           </Link>
-        ) : (
-          <span key={tab.href} className="analysis-tab locked">
-            {tab.label}
-            <span className="tag gray">오후 실습</span>
-          </span>
-        )
-      )}
+        );
+      })}
     </nav>
   );
 }

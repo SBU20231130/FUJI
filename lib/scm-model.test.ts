@@ -21,6 +21,7 @@ test('normalizes analytics leadtime rows into the screen model', () => {
     actualAverage: 37.6,
     p80: 44,
     gap: 12,
+    status: 'CRITICAL',
   });
 });
 
@@ -51,5 +52,6 @@ test('reads the real analytics.v_leadtime_gap column names', () => {
     actualAverage: 28.4,
     p80: 33,
     gap: 8,
+    status: 'CRITICAL',
   });
 });
