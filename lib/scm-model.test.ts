@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeForecastSettings, normalizeLeadtimeGap } from './scm-model.ts';
+import { normalizeDemandProfile, normalizeForecastSettings, normalizeLeadtimeGap } from './scm-model.ts';
 
 test('normalizes analytics leadtime rows into the screen model', () => {
   const result = normalizeLeadtimeGap({
@@ -72,4 +72,29 @@ test('keeps forecast coverage flags and unconfigured policy values explicit', ()
   assert.equal(result?.isolationOk, true);
   assert.equal(result?.trainRowCount, 5602);
   assert.equal(result?.defaultServiceLevel, null);
+});
+
+test('keeps Demand Profile model codes separate from display labels', () => {
+  const result = normalizeDemandProfile({
+    item_id: 'ITEM001',
+    item_name: '테스트 품목',
+    n_periods: 24,
+    n_nonzero_periods: 12,
+    adi: 2,
+    cv: 1,
+    cv_squared: 1,
+    zero_demand_rate: 0.5,
+    trend: -0.3,
+    recent_change_rate: 0.25,
+    peak_period: '2026-01',
+    demand_type: 'LUMPY',
+    seasonality: 'SEASONAL',
+    reason_code: null,
+    stability: 'VOLATILE',
+  });
+
+  assert.equal(result.demandType, 'LUMPY');
+  assert.equal(result.seasonality, 'SEASONAL');
+  assert.equal(result.reasonCode, null);
+  assert.equal(result.cvSquared, 1);
 });
