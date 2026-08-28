@@ -6,6 +6,7 @@ import KpiCard from '@/components/ui/kpi-card';
 import Panel from '@/components/ui/panel';
 import BacktestRunForm from '@/components/admin/backtest-run-form';
 import ManualChampionForm from '@/components/admin/manual-champion-form';
+import PythonForecastForm from '@/components/admin/python-forecast-form';
 import { requireAdmin } from '@/lib/auth';
 import { getBacktestRuns, getCurrentChampions, getForecastRuns, getForecastSettings, getModelPerformance } from '@/lib/scm';
 import type { BacktestRun, ModelPerformance } from '@/lib/scm-model';
@@ -37,6 +38,7 @@ const performanceColumns: Column<ModelPerformance>[] = [
 const runColumns: Column<BacktestRun>[] = [
   { key: 'backtestRunId', label: 'Backtest Run', render: (row) => <span className="data-value">{row.backtestRunId.slice(0, 8)}</span> },
   { key: 'forecastRunId', label: 'Forecast Run', render: (row) => <span className="data-value">{row.forecastRunId.slice(0, 8)}</span> },
+  { key: 'pipeline', label: '파이프라인', render: (row) => <><Badge status={row.pipelineType === 'PYTHON' ? 'SAFE' : 'WARNING'} label={row.pipelineType} />{row.serviceName ? <span className="table-subtext">{row.serviceName}</span> : null}</> },
   { key: 'testStart', label: '검증 기간', render: (row) => `${row.testStart ?? '—'} ~ ${row.testEnd ?? '—'}` },
   { key: 'metric', label: '지표' },
   { key: 'status', label: '상태', render: (row) => row.status === 'COMPLETED' ? <Badge status="SAFE" label="COMPLETED" /> : row.status === 'FAILED' ? <Badge status="CRITICAL" label="FAILED" /> : <Badge status="WARNING" label="RUNNING" /> },
@@ -69,6 +71,9 @@ export default async function BacktestPage() {
       </div>
       <Panel className="section" title="Backtest 실행" description="Forecast를 재실행하지 않고 저장된 Forecast Result와 core.v_test_actual만 채점합니다.">
         <BacktestRunForm runs={forecastRunsResult.rows} defaultMetric={defaultMetric} />
+      </Panel>
+      <Panel className="section" title="Python Forecast 실행" description="별도 FastAPI 서비스에서 Train 데이터만 학습하고, 결과를 기존 Forecast Result 구조에 저장합니다.">
+        <PythonForecastForm />
       </Panel>
       <Panel className="section" title="Backtest 이력" description="검증 기간·지표·실행 상태를 보존합니다.">
         <DataTable columns={runColumns} rows={backtestRunsResult.rows} rowKey={(row) => row.backtestRunId} empty="아직 Backtest 이력이 없습니다. STEP 6 Forecast Result 저장 후 실행하세요." />

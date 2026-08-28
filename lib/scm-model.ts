@@ -100,6 +100,7 @@ export type ModelConfig = {
   description: string | null;
   enabled: boolean | null;
   isBaseline: boolean | null;
+  supportedDemandTypes: DemandType[];
 };
 
 export type ForecastRun = {
@@ -112,6 +113,12 @@ export type ForecastRun = {
   triggeredBy: string | null;
   trainStart: string | null;
   trainEnd: string | null;
+  pipelineType: 'SQL' | 'PYTHON' | string;
+  serviceName: string | null;
+  requestParams: Record<string, unknown>;
+  errorMessage: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
   createdAt: string | null;
 };
 
@@ -129,6 +136,9 @@ export type BacktestRun = {
   dataSnapshotAt: string | null;
   stale: boolean | null;
   forecastStatus: string | null;
+  pipelineType: 'SQL' | 'PYTHON' | string;
+  serviceName: string | null;
+  forecastErrorMessage: string | null;
 };
 
 export type ModelPerformance = {
@@ -253,6 +263,10 @@ function normalizeMetric(raw: string | null): MetricCode | null {
 }
 
 export function normalizeModelConfig(row: Record<string, unknown>): ModelConfig {
+  const supported = value(row, ['supported_demand_types', 'supportedDemandTypes']);
+  const supportedDemandTypes: DemandType[] = Array.isArray(supported)
+    ? supported.filter((item): item is DemandType => ['SMOOTH', 'INTERMITTENT', 'ERRATIC', 'LUMPY'].includes(String(item)))
+    : ['SMOOTH', 'ERRATIC', 'INTERMITTENT', 'LUMPY'];
   return {
     modelId: String(value(row, ['model_id', 'modelId']) ?? '미정'),
     modelVersion: String(value(row, ['model_version', 'modelVersion']) ?? '미정'),
@@ -260,6 +274,7 @@ export function normalizeModelConfig(row: Record<string, unknown>): ModelConfig 
     description: textValue(row, ['description']),
     enabled: booleanValue(row, ['enabled']),
     isBaseline: booleanValue(row, ['is_baseline', 'isBaseline']),
+    supportedDemandTypes,
   };
 }
 
@@ -274,6 +289,12 @@ export function normalizeForecastRun(row: Record<string, unknown>): ForecastRun 
     triggeredBy: textValue(row, ['triggered_by', 'triggeredBy']),
     trainStart: textValue(row, ['train_start', 'trainStart']),
     trainEnd: textValue(row, ['train_end', 'trainEnd']),
+    pipelineType: String(value(row, ['pipeline_type', 'pipelineType']) ?? 'SQL'),
+    serviceName: textValue(row, ['service_name', 'serviceName']),
+    requestParams: (value(row, ['request_params', 'requestParams']) as Record<string, unknown> | null) ?? {},
+    errorMessage: textValue(row, ['error_message', 'errorMessage']),
+    startedAt: textValue(row, ['started_at', 'startedAt']),
+    completedAt: textValue(row, ['completed_at', 'completedAt']),
     createdAt: textValue(row, ['created_at', 'createdAt']),
   };
 }
@@ -293,6 +314,9 @@ export function normalizeBacktestRun(row: Record<string, unknown>): BacktestRun 
     dataSnapshotAt: textValue(row, ['data_snapshot_at', 'dataSnapshotAt']),
     stale: booleanValue(row, ['stale']),
     forecastStatus: textValue(row, ['forecast_status', 'forecastStatus']),
+    pipelineType: String(value(row, ['pipeline_type', 'pipelineType']) ?? 'SQL'),
+    serviceName: textValue(row, ['service_name', 'serviceName']),
+    forecastErrorMessage: textValue(row, ['forecast_error_message', 'forecastErrorMessage']),
   };
 }
 

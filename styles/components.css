@@ -945,6 +945,7 @@ td {
 
 .backtest-form,
 .manual-champion-form,
+.python-forecast-form,
 .model-comparison-filters {
   display: flex;
   align-items: flex-end;
@@ -954,6 +955,7 @@ td {
 
 .backtest-form label,
 .manual-champion-form label,
+.python-forecast-form label,
 .model-comparison-filters label {
   display: grid;
   gap: 5px;
@@ -963,6 +965,7 @@ td {
 }
 
 .backtest-form select,
+.python-forecast-form input,
 .manual-champion-form select,
 .manual-champion-form input,
 .model-comparison-filters select,

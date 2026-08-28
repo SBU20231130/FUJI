@@ -80,7 +80,7 @@ declare
   v_reason text;
 begin
   select count(*) into v_count from core.model_performance where backtest_run_id = v_backtest_id and item_id = 'ITEM002';
-  if v_count <> 3 then raise exception 'ALL_CANDIDATES_NOT_STORED:%', v_count; end if;
+  if v_count <> (select count(*) from core.model_config where enabled) then raise exception 'ALL_CANDIDATES_NOT_STORED:%', v_count; end if;
   select rank, model_id into v_rank, v_model from core.model_performance where backtest_run_id = v_backtest_id and item_id = 'ITEM001' and model_id = 'NAIVE';
   if v_rank <> 1 or v_model <> 'NAIVE' then raise exception 'AUTO_RANK_FAILED'; end if;
   select reason_code into v_reason from core.champion_selection_log where backtest_run_id = v_backtest_id and item_id = 'ITEM002';
