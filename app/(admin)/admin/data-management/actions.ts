@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
 import { parseImportFile, ImportParseError } from '@/lib/import/parse';
-import { IMPORT_SCHEMAS } from '@/lib/import/schema';
+import { IMPORT_SCHEMAS, inferColumnMapping } from '@/lib/import/schema';
 import { IMPORT_TYPES, type ColumnMapping, type ImportMode, type ImportType, type ValidatedRow } from '@/lib/import/types';
 import { validateRows } from '@/lib/import/validate';
 import { createUploadBatch, getApprovedMappedRows, getBatch, getStagingRows, importRows, insertStagingRows, loadReferences, rollbackBatch, saveMappings, saveValidationResult, setBatchStatus } from '@/lib/import/repository';
@@ -75,7 +75,7 @@ export async function prepareImportAction(_previousState: ImportActionState = em
     const batch = await createUploadBatch({ fileName: file.name, importType, importMode, uploadedBy: admin.user.id, totalRows: parsed.rows.length });
     await insertStagingRows(batch.batch_id, parsed.rows.map((row) => ({ rowNumber: row.rowNumber, originalData: row.values })));
     const schema = IMPORT_SCHEMAS[importType];
-    const mapping = Object.fromEntries(schema.fields.map((field) => [field.targetColumn, null]));
+    const mapping = inferColumnMapping(parsed.headers, schema);
     return { batch: { batchId: batch.batch_id, fileName: file.name, importType, importMode, totalRows: parsed.rows.length, headers: parsed.headers, preview: parsed.rows.slice(0, 20).map((row) => ({ rowNumber: row.rowNumber, values: row.values })), mapping, status: batch.status } };
   } catch (error) {
     return { error: safeError(error) };

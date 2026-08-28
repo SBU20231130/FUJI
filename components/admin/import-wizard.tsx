@@ -29,7 +29,7 @@ export default function ImportWizard() {
   const [confirmImport, setConfirmImport] = useState(false);
   const [confirmReplace, setConfirmReplace] = useState(false);
 
-  const batch = importState.batch ?? validationState.batch ?? prepareState.batch;
+  const batch = validationState.batch ?? importState.batch ?? prepareState.batch;
   const validation = validationState.validation;
   const schema = batch ? IMPORT_SCHEMAS[batch.importType] : IMPORT_SCHEMAS[importType];
   const headers = batch?.headers ?? [];
