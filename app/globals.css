@@ -1,18 +1,18 @@
-@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap");
 
 :root {
-  --ink: #182230;
-  --muted: #718096;
-  --line: #e3e8ef;
-  --canvas: #f5f7fb;
+  --ink: #0b1c30;
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --canvas: #f8f9ff;
   --surface: #ffffff;
-  --navy: #17365d;
-  --blue: #2f6fed;
-  --pale-blue: #edf4ff;
-  --green: #1f9d68;
-  --pale-green: #eaf8f1;
-  --amber: #bd7211;
-  --pale-amber: #fff6e4;
+  --navy: #1a2b3c;
+  --blue: #3b82f6;
+  --pale-blue: #e5eeff;
+  --green: #10b981;
+  --pale-green: #e8f8f1;
+  --amber: #f59e0b;
+  --pale-amber: #fff7df;
   --red: #c2413d;
   --pale-red: #fff0ef;
 }
@@ -27,7 +27,7 @@ body {
   margin: 0;
   color: var(--ink);
   background: var(--canvas);
-  font-family: "Noto Sans KR", ui-sans-serif, system-ui, sans-serif;
+  font-family: "Inter", "Noto Sans KR", ui-sans-serif, system-ui, sans-serif;
   word-break: keep-all;
   overflow-wrap: break-word;
 }
@@ -46,11 +46,12 @@ button {
 .sidebar {
   width: 250px;
   flex: 0 0 250px;
-  background: #102b4b;
-  color: #fff;
+  background: #fff;
+  color: var(--ink);
   padding: 28px 18px;
   display: flex;
   flex-direction: column;
+  border-right: 1px solid var(--line);
 }
 .brand {
   display: flex;
@@ -76,11 +77,11 @@ button {
 .brand-copy span {
   display: block;
   margin-top: 3px;
-  color: #a7bad2;
+  color: #64748b;
   font-size: 11px;
 }
 .nav-label {
-  color: #7e99b6;
+  color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 1.3px;
   font-size: 10px;
@@ -95,7 +96,7 @@ button {
 .nav-button {
   border: 0;
   border-radius: 10px;
-  color: #c3d2e3;
+  color: #334155;
   background: transparent;
   padding: 12px 11px;
   display: flex;
@@ -106,16 +107,16 @@ button {
   transition: 0.15s ease;
 }
 .nav-button:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: #eff4ff;
+  color: var(--ink);
 }
 .nav-button.active {
-  background: #2f6fed;
+  background: var(--blue);
   color: #fff;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.2);
 }
 .nav-button.complete {
-  color: #d5f3e4;
+  color: #0f8f66;
 }
 .nav-number {
   width: 22px;
@@ -134,13 +135,13 @@ button {
 .sidebar-foot {
   margin-top: auto;
   padding: 15px 10px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  color: #8fa7c0;
+  border-top: 1px solid var(--line);
+  color: #64748b;
   font-size: 11px;
   line-height: 1.6;
 }
 .sidebar-foot b {
-  color: #fff;
+  color: var(--ink);
   font-weight: 600;
 }
 
@@ -151,11 +152,12 @@ button {
 .topbar {
   height: 75px;
   padding: 0 42px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.96);
   border-bottom: 1px solid var(--line);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 24px;
 }
 .eyebrow {
   color: var(--blue);
@@ -175,6 +177,25 @@ button {
   gap: 18px;
   color: var(--muted);
   font-size: 12px;
+}
+.global-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  max-width: 720px;
+  min-height: 42px;
+  margin-left: auto;
+  padding: 0 16px;
+  color: #94a3b8;
+  background: #eff4ff;
+  border: 1px solid #cbd8ee;
+  border-radius: 999px;
+  font-size: 12px;
+}
+.global-search svg {
+  color: #334155;
+  flex: 0 0 auto;
 }
 .local-badge {
   color: #196845;
@@ -952,6 +973,9 @@ td,
     padding: 17px 18px;
     gap: 12px;
     align-items: flex-start;
+  }
+  .global-search {
+    display: none;
   }
   .top-meta {
     display: block;
