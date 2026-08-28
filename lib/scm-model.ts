@@ -35,6 +35,36 @@ export type StockoutKpi = {
   averageStockoutDays: number | null;
 };
 
+export type DemandType = 'SMOOTH' | 'INTERMITTENT' | 'ERRATIC' | 'LUMPY';
+
+export type DemandProfile = {
+  itemId: string;
+  itemName: string;
+  nPeriods: number | null;
+  nNonzeroPeriods: number | null;
+  adi: number | null;
+  cv: number | null;
+  cvSquared: number | null;
+  zeroDemandRate: number | null;
+  trend: number | null;
+  recentChangeRate: number | null;
+  peakPeriod: string | null;
+  demandType: DemandType | null;
+  seasonality: 'SEASONAL' | 'NOT_SEASONAL' | null;
+  reasonCode: string | null;
+  stability: string | null;
+};
+
+export type DemandProfileKpi = {
+  totalItems: number | null;
+  smooth: number | null;
+  intermittent: number | null;
+  erratic: number | null;
+  lumpy: number | null;
+  crostonNeeded: number | null;
+  calculationUnavailable: number | null;
+};
+
 export type ForecastSettings = {
   settingKey: string;
   dataStart: string | null;
@@ -157,6 +187,42 @@ export function normalizeStockoutKpi(row: Record<string, unknown> | null): Stock
     unavailable: numberValue(row, ['n_unknown', 'n_unavailable', 'unknown', '계산불가수']),
     within30Days: numberValue(row, ['n_within_30d', 'within30Days', '30일이내']),
     averageStockoutDays: numberValue(row, ['avg_stockout_days', 'averageStockoutDays', '평균소진일수']),
+  };
+}
+
+export function normalizeDemandProfile(row: Record<string, unknown>): DemandProfile {
+  const rawDemandType = String(value(row, ['demand_type', 'demandType']) ?? '').toUpperCase();
+  const demandType: DemandType | null = ['SMOOTH', 'INTERMITTENT', 'ERRATIC', 'LUMPY'].includes(rawDemandType) ? rawDemandType as DemandType : null;
+  const rawSeasonality = String(value(row, ['seasonality']) ?? '').toUpperCase();
+  return {
+    itemId: String(value(row, ['item_id', 'itemId', '품목코드']) ?? '미정'),
+    itemName: String(value(row, ['item_name', 'itemName', '품목명']) ?? '미정'),
+    nPeriods: numberValue(row, ['n_periods', 'nPeriods']),
+    nNonzeroPeriods: numberValue(row, ['n_nonzero_periods', 'nNonzeroPeriods']),
+    adi: numberValue(row, ['adi']),
+    cv: numberValue(row, ['cv']),
+    cvSquared: numberValue(row, ['cv_squared', 'cvSquared']),
+    zeroDemandRate: numberValue(row, ['zero_demand_rate', 'zeroDemandRate']),
+    trend: numberValue(row, ['trend', 'trend_per_period']),
+    recentChangeRate: numberValue(row, ['recent_change_rate', 'recentChangeRate']),
+    peakPeriod: textValue(row, ['peak_period', 'peakPeriod']),
+    demandType,
+    seasonality: rawSeasonality === 'SEASONAL' || rawSeasonality === 'NOT_SEASONAL' ? rawSeasonality : null,
+    reasonCode: textValue(row, ['reason_code', 'reasonCode']),
+    stability: textValue(row, ['stability']),
+  };
+}
+
+export function normalizeDemandProfileKpi(row: Record<string, unknown> | null): DemandProfileKpi | null {
+  if (!row) return null;
+  return {
+    totalItems: numberValue(row, ['total_items', 'totalItems']),
+    smooth: numberValue(row, ['n_smooth', 'smooth']),
+    intermittent: numberValue(row, ['n_intermittent', 'intermittent']),
+    erratic: numberValue(row, ['n_erratic', 'erratic']),
+    lumpy: numberValue(row, ['n_lumpy', 'lumpy']),
+    crostonNeeded: numberValue(row, ['n_croston_needed', 'crostonNeeded']),
+    calculationUnavailable: numberValue(row, ['n_calculation_unavailable', 'calculationUnavailable']),
   };
 }
 

@@ -81,6 +81,21 @@
 `item_id`, `item_name`, `item_type`, `supplier_id`, `valid_days`,
 `daily_usage_avg`, `daily_usage_sd`, `cv`, `stability`, `source`
 
+### `v_sku_demand_monthly_grid` · STEP 5
+`core.v_train_demand`와 활성 `forecast_setting`의 학습기간을 월 단위로 펼친
+`item_id × period_start` Grid. 수요 기록이 없는 기간은 구조적 0으로 표시하고,
+원본 행의 수량이 null인 경우는 `quantity`를 null로 유지한다.
+
+### `v_sku_demand_profile` · STEP 5
+학습기간 전용 SKU 수요 특성. `adi`, `cv`, `cv_squared`, `zero_demand_rate`,
+`trend`, `recent_change_rate`, `peak_period`, `demand_type`, `seasonality`,
+`reason_code`, `stability`를 제공한다. `demand_type`은
+`SMOOTH`, `INTERMITTENT`, `ERRATIC`, `LUMPY` 코드만 사용한다.
+
+### `v_demand_profile_kpi` · STEP 5
+`total_items`, 분류별 건수, `n_croston_needed`(INTERMITTENT + LUMPY),
+`n_calculation_unavailable`를 한 행으로 제공한다.
+
 ### `v_usage_anomaly`
 이상 사용 이력. 39행.
 `usage_id`, `item_id`, `use_date`, `qty`, `avg_qty`, `ratio`, `note`,

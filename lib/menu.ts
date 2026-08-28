@@ -32,6 +32,7 @@ export const USER_MENU: MenuGroup[] = [
     items: [
       { id: 'leadtime', label: '리드타임 격차', href: '/analysis/leadtime', icon: 'leadtime' },
       { id: 'stockout', label: '재고 소진 위험', href: '/analysis/stockout', icon: 'stockout' },
+      { id: 'demand-profile', label: 'SKU 수요 프로파일', href: '/analysis/demand-profile', icon: 'demand' },
     ],
   },
 ];
