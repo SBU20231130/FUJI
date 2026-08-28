@@ -30,6 +30,107 @@
   padding: var(--space-6);
 }
 
+.auth-card {
+  width: min(620px, 100%);
+}
+
+.auth-form {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.auth-form label {
+  color: var(--color-ink-subtle);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.auth-form input {
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+  background: var(--color-surface);
+  font-size: 13px;
+}
+
+.auth-form input + label {
+  margin-top: var(--space-2);
+}
+
+.auth-form__submit {
+  width: 100%;
+  margin-top: var(--space-3);
+}
+
+.auth-form__error {
+  margin: var(--space-2) 0 0;
+  color: var(--color-critical);
+  font-size: 12px;
+}
+
+.user-access-form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 250px;
+}
+
+.user-access-form select {
+  min-height: 32px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+  background: var(--color-surface);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.user-access-form__active {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-ink-subtle);
+  font-size: 11px;
+}
+
+.user-access-form__button {
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
+.user-access-form__note,
+.user-access-form__error,
+.user-access-form__success,
+.table-subtext {
+  display: block;
+  font-size: 10px;
+}
+
+.user-access-form__note,
+.table-subtext {
+  color: var(--color-ink-muted);
+}
+
+.user-access-form__error {
+  flex-basis: 100%;
+  color: var(--color-critical);
+}
+
+.user-access-form__success {
+  flex-basis: 100%;
+  color: var(--color-safe-strong);
+}
+
+.admin-users-table {
+  min-width: 980px;
+}
+
 .card {
   padding: var(--space-5);
 }
