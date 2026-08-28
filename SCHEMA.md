@@ -90,6 +90,22 @@
 
 ## core — 정제와 계산
 
+### STEP 3 정책 및 Forecast 설정
+
+| 객체 | 역할 |
+|---|---|
+| `policy_config` | 공통 service level, review period, safety buffer와 확장 설정 |
+| `outlier_rule` | 프로젝트성 수요·반품·중복 등 학습 제외 규칙 |
+| `item_policy` | 품목별 MOQ, pack size, grade, service level |
+| `forecast_setting` | train/test 기간과 granularity. 날짜는 코드에 두지 않음 |
+| `v_train_demand` | `forecast_setting.train_start ~ train_end` 학습 입력 |
+| `v_test_actual` | `forecast_setting.test_start ~ test_end` 검증 Actual |
+
+학습 데이터와 검증 데이터는 동일한 `raw.usage_history`에서 오지만 view의 기간 조건으로
+분리됩니다. `core.v_usage_effective`는 `core.v_train_demand`만 사용하므로 test Actual이
+Demand Profile 계산에 들어가지 않습니다. 기간과 행 수는 `analytics.v_data_coverage`,
+관리자용 요약은 `analytics.v_forecast_settings`에서 확인합니다.
+
 ### `leadtime_plan` (테이블 · 쓰기 가능)
 오전 분석에서 확정한 계획 리드타임.
 `supplier_id`(PK), `planned_lead_time`, `basis`, `service_level`, `confirmed_reason`, `confirmed_at`
@@ -126,6 +142,15 @@ v_inbound_qty            진행 중 선적 = 입고예정
 | purchase_order | 92 | 공급업체 표기 25종 |
 | goods_receipt | 81 | |
 | inventory | 43 | 창고 표기 흔들림 있음 |
+
+STEP 3에서 다음 raw 입력 테이블을 추가하고, 기존 raw 입력 테이블에도
+`batch_id`, `source_type`, `loaded_at`, `source_record_id`를 nullable로 추가했습니다.
+
+| 테이블 | 용도 |
+|---|---|
+| business_event | 프로젝트·프로모션 등 업무 이벤트 원본 |
+| sales_order | 판매 주문 원본 |
+| item_substitute | 대체 품목 관계 원본 |
 
 `shipment_log` 타임스탬프 순서:
 

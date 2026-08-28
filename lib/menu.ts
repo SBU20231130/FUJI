@@ -42,6 +42,7 @@ export const ADMIN_MENU: MenuGroup[] = [
     label: 'ADMIN',
     items: [
       { id: 'users', label: '사용자 관리', href: '/admin/users', icon: 'users' },
+      { id: 'forecast-settings', label: 'Forecast 설정', href: '/admin/forecast-settings', icon: 'settings' },
       { id: 'settings', label: '시스템 설정', href: '/admin/settings', icon: 'settings' },
     ],
   },

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeLeadtimeGap } from './scm-model.ts';
+import { normalizeForecastSettings, normalizeLeadtimeGap } from './scm-model.ts';
 
 test('normalizes analytics leadtime rows into the screen model', () => {
   const result = normalizeLeadtimeGap({
@@ -54,4 +54,22 @@ test('reads the real analytics.v_leadtime_gap column names', () => {
     gap: 8,
     status: 'CRITICAL',
   });
+});
+
+test('keeps forecast coverage flags and unconfigured policy values explicit', () => {
+  const result = normalizeForecastSettings({
+    setting_key: 'DEFAULT',
+    granularity: 'DAILY',
+    train_row_count: 5602,
+    test_row_count: 1436,
+    overlap_row_count: 0,
+    train_window_ok: true,
+    test_window_ok: true,
+    isolation_ok: true,
+    default_service_level: null,
+  });
+
+  assert.equal(result?.isolationOk, true);
+  assert.equal(result?.trainRowCount, 5602);
+  assert.equal(result?.defaultServiceLevel, null);
 });

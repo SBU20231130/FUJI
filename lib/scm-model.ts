@@ -35,6 +35,29 @@ export type StockoutKpi = {
   averageStockoutDays: number | null;
 };
 
+export type ForecastSettings = {
+  settingKey: string;
+  dataStart: string | null;
+  dataEnd: string | null;
+  trainStart: string | null;
+  trainEnd: string | null;
+  testStart: string | null;
+  testEnd: string | null;
+  granularity: string | null;
+  trainRowCount: number | null;
+  testRowCount: number | null;
+  overlapRowCount: number | null;
+  trainWindowOk: boolean | null;
+  testWindowOk: boolean | null;
+  isolationOk: boolean | null;
+  defaultServiceLevel: number | null;
+  defaultReviewPeriodDays: number | null;
+  defaultSafetyBufferDays: number | null;
+  activeItemPolicyCount: number | null;
+  enabledOutlierRuleCount: number | null;
+  learningExcludedRuleCount: number | null;
+};
+
 function value(row: Record<string, unknown>, keys: string[]) {
   for (const key of keys) {
     if (row[key] !== undefined && row[key] !== null && row[key] !== '') return row[key];
@@ -47,6 +70,45 @@ function numberValue(row: Record<string, unknown>, keys: string[]) {
   if (raw === null) return null;
   const parsed = Number(raw);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function booleanValue(row: Record<string, unknown>, keys: string[]) {
+  const raw = value(row, keys);
+  if (typeof raw === 'boolean') return raw;
+  if (raw === 'true' || raw === 't' || raw === 1 || raw === '1') return true;
+  if (raw === 'false' || raw === 'f' || raw === 0 || raw === '0') return false;
+  return null;
+}
+
+function textValue(row: Record<string, unknown>, keys: string[]) {
+  const raw = value(row, keys);
+  return raw === null ? null : String(raw);
+}
+
+export function normalizeForecastSettings(row: Record<string, unknown> | null): ForecastSettings | null {
+  if (!row) return null;
+  return {
+    settingKey: String(value(row, ['setting_key', 'settingKey']) ?? 'DEFAULT'),
+    dataStart: textValue(row, ['data_start', 'dataStart']),
+    dataEnd: textValue(row, ['data_end', 'dataEnd']),
+    trainStart: textValue(row, ['train_start', 'trainStart']),
+    trainEnd: textValue(row, ['train_end', 'trainEnd']),
+    testStart: textValue(row, ['test_start', 'testStart']),
+    testEnd: textValue(row, ['test_end', 'testEnd']),
+    granularity: textValue(row, ['granularity']),
+    trainRowCount: numberValue(row, ['train_row_count', 'trainRowCount']),
+    testRowCount: numberValue(row, ['test_row_count', 'testRowCount']),
+    overlapRowCount: numberValue(row, ['overlap_row_count', 'overlapRowCount']),
+    trainWindowOk: booleanValue(row, ['train_window_ok', 'trainWindowOk']),
+    testWindowOk: booleanValue(row, ['test_window_ok', 'testWindowOk']),
+    isolationOk: booleanValue(row, ['isolation_ok', 'isolationOk']),
+    defaultServiceLevel: numberValue(row, ['default_service_level', 'defaultServiceLevel']),
+    defaultReviewPeriodDays: numberValue(row, ['default_review_period_days', 'defaultReviewPeriodDays']),
+    defaultSafetyBufferDays: numberValue(row, ['default_safety_buffer_days', 'defaultSafetyBufferDays']),
+    activeItemPolicyCount: numberValue(row, ['active_item_policy_count', 'activeItemPolicyCount']),
+    enabledOutlierRuleCount: numberValue(row, ['enabled_outlier_rule_count', 'enabledOutlierRuleCount']),
+    learningExcludedRuleCount: numberValue(row, ['learning_excluded_rule_count', 'learningExcludedRuleCount']),
+  };
 }
 
 export function normalizeLeadtimeGap(row: Record<string, unknown>): LeadtimeGap {
