@@ -25,9 +25,9 @@ cp <이_폴더>/app/analysis/leadtime/page.tsx app/analysis/leadtime/
 이 세 가지가 **없어야** 참가자 실습이 성립합니다.
 
 ```bash
-grep -n "StockoutRisk" lib/scm-model.ts     # 주석만 나와야 함
-grep -n "getStockoutRisks" lib/scm.ts       # 주석만 나와야 함
-ls app/analysis/stockout                    # No such file 이어야 함
+grep -n "StockoutRisk" lib/scm-model.ts     # 구현된 정규화 모델 확인
+grep -n "getStockoutRisk" lib/scm.ts        # analytics 조회 함수 확인
+ls app/\(user\)/analysis/stockout            # STEP 1 분석 화면 확인
 ```
 
 `lib/scm-model.ts` 끝부분과 `lib/scm.ts` 중간에 "여기에 만듭니다" 주석이 있습니다.
@@ -80,7 +80,7 @@ npm run dev
 | 주소 | 기대 |
 |---|---|
 | `/analysis/leadtime` | 공급처 12행 |
-| `/analysis/stockout` | 404 (참가자가 오후에 만듭니다) |
+| `/analysis/stockout` | 로그인 후 재고 소진 위험 화면 |
 | `/api/health/supabase` | `{"configured": true}` |
 
 `/analysis/leadtime` 이 "조회에 실패했습니다" 로 나오면 화면 아래 사유를 봅니다.
