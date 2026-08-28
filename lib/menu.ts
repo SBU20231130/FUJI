@@ -33,6 +33,7 @@ export const USER_MENU: MenuGroup[] = [
       { id: 'leadtime', label: '리드타임 격차', href: '/analysis/leadtime', icon: 'leadtime' },
       { id: 'stockout', label: '재고 소진 위험', href: '/analysis/stockout', icon: 'stockout' },
       { id: 'demand-profile', label: 'SKU 수요 프로파일', href: '/analysis/demand-profile', icon: 'demand' },
+      { id: 'model-comparison', label: '모델 비교', href: '/analysis/model-comparison', icon: 'leadtime' },
     ],
   },
 ];
@@ -45,6 +46,7 @@ export const ADMIN_MENU: MenuGroup[] = [
       { id: 'users', label: '사용자 관리', href: '/admin/users', icon: 'users' },
       { id: 'data-management', label: '데이터 적재', href: '/admin/data-management', icon: 'settings' },
       { id: 'forecast-settings', label: 'Forecast 설정', href: '/admin/forecast-settings', icon: 'settings' },
+      { id: 'backtest', label: 'Backtest / Champion', href: '/admin/backtest', icon: 'calculation' },
       { id: 'settings', label: '시스템 설정', href: '/admin/settings', icon: 'settings' },
     ],
   },

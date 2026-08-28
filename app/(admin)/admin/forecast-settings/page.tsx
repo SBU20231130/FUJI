@@ -31,6 +31,8 @@ function SettingsTable({ settings }: { settings: ForecastSettings }) {
           <tr><th>학습 기간</th><td><DateValue value={settings.trainStart} /> ~ <DateValue value={settings.trainEnd} /></td></tr>
           <tr><th>검증 기간</th><td><DateValue value={settings.testStart} /> ~ <DateValue value={settings.testEnd} /></td></tr>
           <tr><th>Granularity</th><td>{settings.granularity ?? <EmptyValue reasonCode="NOT_CONFIGURED" />}</td></tr>
+          <tr><th>Champion metric</th><td>{settings.championMetric ?? <EmptyValue reasonCode="NOT_CONFIGURED" />}</td></tr>
+          <tr><th>Baseline model</th><td>{settings.baselineModelId && settings.baselineModelVersion ? `${settings.baselineModelId} · v${settings.baselineModelVersion}` : <EmptyValue reasonCode="BASELINE_NOT_CONFIGURED" />}</td></tr>
           <tr><th>학습 행 수</th><td><NumberValue value={settings.trainRowCount} /></td></tr>
           <tr><th>검증 Actual 행 수</th><td><NumberValue value={settings.testRowCount} /></td></tr>
           <tr><th>기간 겹침 행 수</th><td><NumberValue value={settings.overlapRowCount} /></td></tr>

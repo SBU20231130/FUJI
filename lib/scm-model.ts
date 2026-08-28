@@ -86,6 +86,110 @@ export type ForecastSettings = {
   activeItemPolicyCount: number | null;
   enabledOutlierRuleCount: number | null;
   learningExcludedRuleCount: number | null;
+  championMetric?: MetricCode | null;
+  baselineModelId?: string | null;
+  baselineModelVersion?: string | null;
+};
+
+export type MetricCode = 'WAPE' | 'MAPE' | 'RMSE' | 'MAE';
+
+export type ModelConfig = {
+  modelId: string;
+  modelVersion: string;
+  modelName: string;
+  description: string | null;
+  enabled: boolean | null;
+  isBaseline: boolean | null;
+};
+
+export type ForecastRun = {
+  forecastRunId: string;
+  forecastSettingKey: string;
+  dataSnapshotAt: string | null;
+  status: string | null;
+  stale: boolean | null;
+  staleReason: string | null;
+  triggeredBy: string | null;
+  trainStart: string | null;
+  trainEnd: string | null;
+  createdAt: string | null;
+};
+
+export type BacktestRun = {
+  backtestRunId: string;
+  forecastRunId: string;
+  testStart: string | null;
+  testEnd: string | null;
+  metric: MetricCode | null;
+  status: 'RUNNING' | 'COMPLETED' | 'FAILED' | string;
+  triggeredBy: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  errorCode: string | null;
+  dataSnapshotAt: string | null;
+  stale: boolean | null;
+  forecastStatus: string | null;
+};
+
+export type ModelPerformance = {
+  performanceId: number;
+  backtestRunId: string;
+  forecastRunId: string;
+  modelId: string;
+  modelVersion: string;
+  modelName: string | null;
+  itemId: string;
+  testStart: string | null;
+  testEnd: string | null;
+  metric: MetricCode | null;
+  periodsTotal: number | null;
+  actualPeriods: number | null;
+  forecastPeriods: number | null;
+  comparablePeriods: number | null;
+  actualAbsSum: number | null;
+  wape: number | null;
+  mape: number | null;
+  bias: number | null;
+  rmse: number | null;
+  mae: number | null;
+  metricValue: number | null;
+  baselineImprovement: number | null;
+  rank: number | null;
+  status: 'VALID' | 'CALCULATION_UNAVAILABLE' | string;
+  reasonCode: string | null;
+};
+
+export type ChampionModel = {
+  championModelId: number;
+  itemId: string;
+  modelId: string;
+  modelVersion: string;
+  modelName: string | null;
+  metric: MetricCode | null;
+  metricValue: number | null;
+  baselineImprovement: number | null;
+  backtestRunId: string;
+  forecastRunId: string;
+  selectionMethod: 'AUTO' | 'MANUAL' | string;
+  selectionReason: string;
+  selectedAt: string | null;
+};
+
+export type ComparisonPoint = {
+  forecastRunId: string;
+  modelId: string;
+  modelVersion: string;
+  modelName: string | null;
+  itemId: string;
+  forecastDate: string;
+  actualQty: number | null;
+  forecastValue: number | null;
+  p50: number | null;
+  p80: number | null;
+  p90: number | null;
+  predictionLower: number | null;
+  predictionUpper: number | null;
+  validationStatus: string;
 };
 
 function value(row: Record<string, unknown>, keys: string[]) {
@@ -138,6 +242,124 @@ export function normalizeForecastSettings(row: Record<string, unknown> | null): 
     activeItemPolicyCount: numberValue(row, ['active_item_policy_count', 'activeItemPolicyCount']),
     enabledOutlierRuleCount: numberValue(row, ['enabled_outlier_rule_count', 'enabledOutlierRuleCount']),
     learningExcludedRuleCount: numberValue(row, ['learning_excluded_rule_count', 'learningExcludedRuleCount']),
+    championMetric: normalizeMetric(textValue(row, ['champion_metric', 'championMetric'])),
+    baselineModelId: textValue(row, ['baseline_model_id', 'baselineModelId']),
+    baselineModelVersion: textValue(row, ['baseline_model_version', 'baselineModelVersion']),
+  };
+}
+
+function normalizeMetric(raw: string | null): MetricCode | null {
+  return raw && ['WAPE', 'MAPE', 'RMSE', 'MAE'].includes(raw.toUpperCase()) ? raw.toUpperCase() as MetricCode : null;
+}
+
+export function normalizeModelConfig(row: Record<string, unknown>): ModelConfig {
+  return {
+    modelId: String(value(row, ['model_id', 'modelId']) ?? '미정'),
+    modelVersion: String(value(row, ['model_version', 'modelVersion']) ?? '미정'),
+    modelName: String(value(row, ['model_name', 'modelName']) ?? '미정'),
+    description: textValue(row, ['description']),
+    enabled: booleanValue(row, ['enabled']),
+    isBaseline: booleanValue(row, ['is_baseline', 'isBaseline']),
+  };
+}
+
+export function normalizeForecastRun(row: Record<string, unknown>): ForecastRun {
+  return {
+    forecastRunId: String(value(row, ['forecast_run_id', 'forecastRunId']) ?? ''),
+    forecastSettingKey: String(value(row, ['forecast_setting_key', 'forecastSettingKey']) ?? 'DEFAULT'),
+    dataSnapshotAt: textValue(row, ['data_snapshot_at', 'dataSnapshotAt']),
+    status: textValue(row, ['status']),
+    stale: booleanValue(row, ['stale']),
+    staleReason: textValue(row, ['stale_reason', 'staleReason']),
+    triggeredBy: textValue(row, ['triggered_by', 'triggeredBy']),
+    trainStart: textValue(row, ['train_start', 'trainStart']),
+    trainEnd: textValue(row, ['train_end', 'trainEnd']),
+    createdAt: textValue(row, ['created_at', 'createdAt']),
+  };
+}
+
+export function normalizeBacktestRun(row: Record<string, unknown>): BacktestRun {
+  return {
+    backtestRunId: String(value(row, ['backtest_run_id', 'backtestRunId']) ?? ''),
+    forecastRunId: String(value(row, ['forecast_run_id', 'forecastRunId']) ?? ''),
+    testStart: textValue(row, ['test_start', 'testStart']),
+    testEnd: textValue(row, ['test_end', 'testEnd']),
+    metric: normalizeMetric(textValue(row, ['metric'])),
+    status: String(value(row, ['status']) ?? 'CALCULATION_UNAVAILABLE') as BacktestRun['status'],
+    triggeredBy: textValue(row, ['triggered_by', 'triggeredBy']),
+    startedAt: textValue(row, ['started_at', 'startedAt']),
+    completedAt: textValue(row, ['completed_at', 'completedAt']),
+    errorCode: textValue(row, ['error_code', 'errorCode']),
+    dataSnapshotAt: textValue(row, ['data_snapshot_at', 'dataSnapshotAt']),
+    stale: booleanValue(row, ['stale']),
+    forecastStatus: textValue(row, ['forecast_status', 'forecastStatus']),
+  };
+}
+
+export function normalizeModelPerformance(row: Record<string, unknown>): ModelPerformance {
+  return {
+    performanceId: numberValue(row, ['performance_id', 'performanceId']) ?? 0,
+    backtestRunId: String(value(row, ['backtest_run_id', 'backtestRunId']) ?? ''),
+    forecastRunId: String(value(row, ['forecast_run_id', 'forecastRunId']) ?? ''),
+    modelId: String(value(row, ['model_id', 'modelId']) ?? '미정'),
+    modelVersion: String(value(row, ['model_version', 'modelVersion']) ?? '미정'),
+    modelName: textValue(row, ['model_name', 'modelName']),
+    itemId: String(value(row, ['item_id', 'itemId']) ?? '미정'),
+    testStart: textValue(row, ['test_start', 'testStart']),
+    testEnd: textValue(row, ['test_end', 'testEnd']),
+    metric: normalizeMetric(textValue(row, ['metric'])),
+    periodsTotal: numberValue(row, ['periods_total', 'periodsTotal']),
+    actualPeriods: numberValue(row, ['actual_periods', 'actualPeriods']),
+    forecastPeriods: numberValue(row, ['forecast_periods', 'forecastPeriods']),
+    comparablePeriods: numberValue(row, ['comparable_periods', 'comparablePeriods']),
+    actualAbsSum: numberValue(row, ['actual_abs_sum', 'actualAbsSum']),
+    wape: numberValue(row, ['wape']),
+    mape: numberValue(row, ['mape']),
+    bias: numberValue(row, ['bias']),
+    rmse: numberValue(row, ['rmse']),
+    mae: numberValue(row, ['mae']),
+    metricValue: numberValue(row, ['metric_value', 'metricValue']),
+    baselineImprovement: numberValue(row, ['baseline_improvement', 'baselineImprovement']),
+    rank: numberValue(row, ['rank']),
+    status: String(value(row, ['status']) ?? 'CALCULATION_UNAVAILABLE'),
+    reasonCode: textValue(row, ['reason_code', 'reasonCode']),
+  };
+}
+
+export function normalizeChampionModel(row: Record<string, unknown>): ChampionModel {
+  return {
+    championModelId: numberValue(row, ['champion_model_id', 'championModelId']) ?? 0,
+    itemId: String(value(row, ['item_id', 'itemId']) ?? '미정'),
+    modelId: String(value(row, ['model_id', 'modelId']) ?? '미정'),
+    modelVersion: String(value(row, ['model_version', 'modelVersion']) ?? '미정'),
+    modelName: textValue(row, ['model_name', 'modelName']),
+    metric: normalizeMetric(textValue(row, ['metric'])),
+    metricValue: numberValue(row, ['metric_value', 'metricValue']),
+    baselineImprovement: numberValue(row, ['baseline_improvement', 'baselineImprovement']),
+    backtestRunId: String(value(row, ['backtest_run_id', 'backtestRunId']) ?? ''),
+    forecastRunId: String(value(row, ['forecast_run_id', 'forecastRunId']) ?? ''),
+    selectionMethod: String(value(row, ['selection_method', 'selectionMethod']) ?? 'AUTO'),
+    selectionReason: String(value(row, ['selection_reason', 'selectionReason']) ?? ''),
+    selectedAt: textValue(row, ['selected_at', 'selectedAt']),
+  };
+}
+
+export function normalizeComparisonPoint(row: Record<string, unknown>): ComparisonPoint {
+  return {
+    forecastRunId: String(value(row, ['forecast_run_id', 'forecastRunId']) ?? ''),
+    modelId: String(value(row, ['model_id', 'modelId']) ?? '미정'),
+    modelVersion: String(value(row, ['model_version', 'modelVersion']) ?? '미정'),
+    modelName: textValue(row, ['model_name', 'modelName']),
+    itemId: String(value(row, ['item_id', 'itemId']) ?? '미정'),
+    forecastDate: String(value(row, ['forecast_date', 'forecastDate']) ?? ''),
+    actualQty: numberValue(row, ['actual_qty', 'actualQty']),
+    forecastValue: numberValue(row, ['forecast_value', 'forecastValue']),
+    p50: numberValue(row, ['p50']),
+    p80: numberValue(row, ['p80']),
+    p90: numberValue(row, ['p90']),
+    predictionLower: numberValue(row, ['prediction_lower', 'predictionLower']),
+    predictionUpper: numberValue(row, ['prediction_upper', 'predictionUpper']),
+    validationStatus: String(value(row, ['validation_status', 'validationStatus']) ?? 'ACTUAL_UNAVAILABLE'),
   };
 }
 

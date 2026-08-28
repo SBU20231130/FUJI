@@ -943,6 +943,76 @@ td {
   font-size: 10px;
 }
 
+.backtest-form,
+.manual-champion-form,
+.model-comparison-filters {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.backtest-form label,
+.manual-champion-form label,
+.model-comparison-filters label {
+  display: grid;
+  gap: 5px;
+  color: var(--color-ink-subtle);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.backtest-form select,
+.manual-champion-form select,
+.manual-champion-form input,
+.model-comparison-filters select,
+.model-comparison-filters input {
+  min-height: 36px;
+  min-width: 180px;
+  padding: 7px 9px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+  background: var(--color-surface);
+  font-size: 12px;
+}
+
+.manual-champion-form__reason input {
+  min-width: 270px;
+}
+
+.form-help,
+.form-error,
+.form-success {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 11px;
+}
+
+.form-help {
+  color: var(--color-ink-muted);
+}
+
+.form-error {
+  color: var(--color-critical);
+}
+
+.form-success {
+  color: var(--color-safe-strong);
+}
+
+.model-comparison-filters {
+  align-items: flex-end;
+  padding: var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-blue);
+}
+
+.model-comparison-filters .ui-button {
+  min-height: 36px;
+}
+
 @media (max-width: 900px) {
   .import-form__grid,
   .mapping-grid {
