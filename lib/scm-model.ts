@@ -15,24 +15,161 @@ export type StockoutRisk = {
   itemId: string;
   itemName: string;
   supplier: string;
+  supplierId: string | null;
   currentStock: number | null;
   inboundQty: number | null;
   availableQty: number | null;
   dailyUsageAvg: number | null;
   plannedLeadTime: number | null;
+  effectiveLeadTime: number | null;
+  leadTimeSource: string | null;
   stockoutDays: number | null;
   stockoutDate: string | null;
+  projectionAsOf: string | null;
+  daysOfSupply: number | null;
+  monthsOfSupply: number | null;
+  scheduledReceipts: number | null;
+  confirmedSalesOrder: number | null;
+  softAllocation: number | null;
+  forecastDemand: number | null;
+  forecastSource: string | null;
+  forecastModelId: string | null;
+  forecastModelVersion: string | null;
+  softAllocationStatus: string | null;
+  confirmedSalesOrderStatus: string | null;
   status: ScmStatus;
-  reasonCode?: string;
+  reasonCode: string | null;
 };
 
 export type StockoutKpi = {
   items: number | null;
   critical: number | null;
+  warning: number | null;
   safe: number | null;
   unavailable: number | null;
   within30Days: number | null;
   averageStockoutDays: number | null;
+};
+
+export type InventoryProjectionRow = {
+  itemId: string;
+  itemName: string;
+  supplier: string;
+  projectionAsOf: string | null;
+  period: string;
+  periodDays: number | null;
+  beginningInventory: number | null;
+  scheduledReceipts: number | null;
+  confirmedSalesOrder: number | null;
+  softAllocation: number | null;
+  forecastDemand: number | null;
+  endingProjectedInventory: number | null;
+  stockoutPeriod: string | null;
+  daysOfSupply: number | null;
+  monthsOfSupply: number | null;
+  status: ScmStatus;
+  reasonCode: string | null;
+  effectiveLeadTime: number | null;
+  leadTimeSource: string | null;
+  forecastSource: string | null;
+  softAllocationStatus: string | null;
+  confirmedSalesOrderStatus: string | null;
+};
+
+export type SafetyStock = {
+  itemId: string;
+  itemName: string;
+  supplierId: string | null;
+  supplierName: string | null;
+  itemGrade: string | null;
+  serviceLevel: number | null;
+  zValue: number | null;
+  expectedDailyDemand: number | null;
+  forecastErrorSigma: number | null;
+  forecastErrorSamples: number | null;
+  leadtimeMean: number | null;
+  leadtimeStddev: number | null;
+  leadtimeSamples: number | null;
+  effectiveLeadtime: number | null;
+  leadTimeSource: string | null;
+  sigmaDlt: number | null;
+  safetyStock: number | null;
+  availableInventory: number | null;
+  scheduledReceipt: number | null;
+  forecastRunId: string | null;
+  backtestRunId: string | null;
+  modelId: string | null;
+  modelVersion: string | null;
+  sigmaSource: string | null;
+  serviceLevelSource: string | null;
+  calculationStatus: string;
+  reasonCode: string | null;
+};
+
+export type PurchaseRecommendation = {
+  itemId: string;
+  itemName: string;
+  itemGrade: string | null;
+  forecastQty: number | null;
+  confirmedOrderQty: number | null;
+  demandBasisQty: number | null;
+  availableInventory: number | null;
+  scheduledReceipt: number | null;
+  safetyStock: number | null;
+  effectiveLeadtime: number | null;
+  stockoutDate: string | null;
+  safetyBufferDays: number | null;
+  requiredQty: number | null;
+  moq: number | null;
+  packSize: number | null;
+  recommendedQty: number | null;
+  recommendedOrderDate: string | null;
+  immediateOrder: boolean | null;
+  orderTimingStatus: string | null;
+  riskStatus: ScmStatus;
+  calculationStatus: string;
+  reasonCode: string | null;
+  forecastRunId: string | null;
+  modelVersion: string | null;
+  backtestRunId: string | null;
+  forecastErrorSigma: number | null;
+  leadtimeStddev: number | null;
+  serviceLevel: number | null;
+  zValue: number | null;
+  calculationTrace: Record<string, unknown> | null;
+};
+
+export type LeadtimePolicy = {
+  itemId: string;
+  itemName: string;
+  supplierId: string;
+  supplierName: string;
+  country: string | null;
+  meanDays: number | null;
+  p50: number | null;
+  p80: number | null;
+  p90: number | null;
+  adminLeadTime: number | null;
+  effectiveLeadTime: number | null;
+  source: string | null;
+  basis: string | null;
+  serviceLevel: number | null;
+  confirmedReason: string | null;
+  confirmedAt: string | null;
+};
+
+export type LeadtimePolicyHistory = {
+  historyId: number;
+  supplierId: string;
+  supplierName: string;
+  beforeLeadTime: number | null;
+  afterLeadTime: number | null;
+  beforeBasis: string | null;
+  afterBasis: string | null;
+  changedBy: string | null;
+  changedAt: string | null;
+  beforeReason: string | null;
+  afterReason: string | null;
 };
 
 export type DemandType = 'SMOOTH' | 'INTERMITTENT' | 'ERRATIC' | 'LUMPY';
@@ -402,25 +539,195 @@ export function normalizeLeadtimeGap(row: Record<string, unknown>): LeadtimeGap 
   };
 }
 
+export function normalizeLeadtimePolicy(row: Record<string, unknown>): LeadtimePolicy {
+  return {
+    itemId: String(value(row, ['item_id', 'itemId']) ?? '미정'),
+    itemName: String(value(row, ['item_name', 'itemName']) ?? '미정'),
+    supplierId: String(value(row, ['supplier_id', 'supplierId']) ?? '미정'),
+    supplierName: String(value(row, ['supplier_name', 'supplierName']) ?? '미정'),
+    country: textValue(row, ['country']),
+    meanDays: numberValue(row, ['mean_days', 'meanDays']),
+    p50: numberValue(row, ['p50_days', 'p50']),
+    p80: numberValue(row, ['p80_days', 'p80']),
+    p90: numberValue(row, ['p90_days', 'p90']),
+    adminLeadTime: numberValue(row, ['admin_lead_time', 'adminLeadTime']),
+    effectiveLeadTime: numberValue(row, ['effective_lead_time', 'effectiveLeadTime']),
+    source: textValue(row, ['source']),
+    basis: textValue(row, ['basis']),
+    serviceLevel: numberValue(row, ['service_level', 'serviceLevel']),
+    confirmedReason: textValue(row, ['confirmed_reason', 'confirmedReason']),
+    confirmedAt: textValue(row, ['confirmed_at', 'confirmedAt']),
+  };
+}
+
+export function normalizeLeadtimePolicyHistory(row: Record<string, unknown>): LeadtimePolicyHistory {
+  return {
+    historyId: numberValue(row, ['history_id', 'historyId']) ?? 0,
+    supplierId: String(value(row, ['supplier_id', 'supplierId']) ?? '미정'),
+    supplierName: String(value(row, ['supplier_name', 'supplierName']) ?? '미정'),
+    beforeLeadTime: numberValue(row, ['before_planned_lead_time', 'beforeLeadTime']),
+    afterLeadTime: numberValue(row, ['after_planned_lead_time', 'afterLeadTime']),
+    beforeBasis: textValue(row, ['before_basis', 'beforeBasis']),
+    afterBasis: textValue(row, ['after_basis', 'afterBasis']),
+    changedBy: textValue(row, ['changed_by', 'changedBy']),
+    changedAt: textValue(row, ['changed_at', 'changedAt']),
+    beforeReason: textValue(row, ['before_confirmed_reason', 'beforeReason']),
+    afterReason: textValue(row, ['after_confirmed_reason', 'afterReason']),
+  };
+}
+
+export function normalizeInventoryProjection(row: Record<string, unknown>): InventoryProjectionRow {
+  const rawStatus = String(value(row, ['risk_status', 'status']) ?? '').toUpperCase();
+  const status: ScmStatus = rawStatus === 'CRITICAL'
+    ? 'CRITICAL'
+    : rawStatus === 'WARNING'
+      ? 'WARNING'
+      : rawStatus === 'SAFE'
+        ? 'SAFE'
+        : 'CALCULATION_UNAVAILABLE';
+  return {
+    itemId: String(value(row, ['item_id', 'itemId']) ?? '미정'),
+    itemName: String(value(row, ['item_name', 'itemName']) ?? '미정'),
+    supplier: String(value(row, ['supplier_name', 'supplier', 'supplierId']) ?? '미정'),
+    projectionAsOf: textValue(row, ['projection_as_of', 'projectionAsOf']),
+    period: String(value(row, ['period']) ?? ''),
+    periodDays: numberValue(row, ['period_days', 'periodDays']),
+    beginningInventory: numberValue(row, ['beginning_inventory', 'beginningInventory']),
+    scheduledReceipts: numberValue(row, ['scheduled_receipts', 'scheduledReceipts']),
+    confirmedSalesOrder: numberValue(row, ['confirmed_sales_order', 'confirmedSalesOrder']),
+    softAllocation: numberValue(row, ['soft_allocation', 'softAllocation']),
+    forecastDemand: numberValue(row, ['forecast_demand', 'forecastDemand']),
+    endingProjectedInventory: numberValue(row, ['ending_projected_inventory', 'endingProjectedInventory']),
+    stockoutPeriod: textValue(row, ['stockout_period', 'stockoutPeriod']),
+    daysOfSupply: numberValue(row, ['days_of_supply', 'daysOfSupply']),
+    monthsOfSupply: numberValue(row, ['months_of_supply', 'monthsOfSupply']),
+    status,
+    reasonCode: textValue(row, ['reason_code', 'reasonCode']),
+    effectiveLeadTime: numberValue(row, ['effective_lead_time', 'effectiveLeadTime']),
+    leadTimeSource: textValue(row, ['lead_time_source', 'leadTimeSource']),
+    forecastSource: textValue(row, ['forecast_source', 'forecastSource']),
+    softAllocationStatus: textValue(row, ['soft_allocation_status', 'softAllocationStatus']),
+    confirmedSalesOrderStatus: textValue(row, ['confirmed_sales_order_status', 'confirmedSalesOrderStatus']),
+  };
+}
+
+export function normalizeSafetyStock(row: Record<string, unknown>): SafetyStock {
+  return {
+    itemId: String(value(row, ['item_id', 'itemId']) ?? '미정'),
+    itemName: String(value(row, ['item_name', 'itemName']) ?? '미정'),
+    supplierId: textValue(row, ['supplier_id', 'supplierId']),
+    supplierName: textValue(row, ['supplier_name', 'supplierName']),
+    itemGrade: textValue(row, ['item_grade', 'itemGrade']),
+    serviceLevel: numberValue(row, ['service_level', 'serviceLevel']),
+    zValue: numberValue(row, ['z_value', 'zValue']),
+    expectedDailyDemand: numberValue(row, ['expected_daily_demand', 'expectedDailyDemand']),
+    forecastErrorSigma: numberValue(row, ['forecast_error_sigma', 'forecastErrorSigma']),
+    forecastErrorSamples: numberValue(row, ['forecast_error_samples', 'forecastErrorSamples']),
+    leadtimeMean: numberValue(row, ['leadtime_mean', 'leadtimeMean']),
+    leadtimeStddev: numberValue(row, ['leadtime_stddev', 'leadtimeStddev']),
+    leadtimeSamples: numberValue(row, ['leadtime_samples', 'leadtimeSamples']),
+    effectiveLeadtime: numberValue(row, ['effective_leadtime', 'effectiveLeadtime']),
+    leadTimeSource: textValue(row, ['lead_time_source', 'leadTimeSource']),
+    sigmaDlt: numberValue(row, ['sigma_dlt', 'sigmaDlt']),
+    safetyStock: numberValue(row, ['safety_stock', 'safetyStock']),
+    availableInventory: numberValue(row, ['available_inventory', 'availableInventory']),
+    scheduledReceipt: numberValue(row, ['scheduled_receipt', 'scheduledReceipt']),
+    forecastRunId: textValue(row, ['forecast_run_id', 'forecastRunId']),
+    backtestRunId: textValue(row, ['backtest_run_id', 'backtestRunId']),
+    modelId: textValue(row, ['model_id', 'modelId']),
+    modelVersion: textValue(row, ['model_version', 'modelVersion']),
+    sigmaSource: textValue(row, ['sigma_source', 'sigmaSource']),
+    serviceLevelSource: textValue(row, ['service_level_source', 'serviceLevelSource']),
+    calculationStatus: String(value(row, ['calculation_status', 'calculationStatus']) ?? 'CALCULATION_UNAVAILABLE'),
+    reasonCode: textValue(row, ['reason_code', 'reasonCode']),
+  };
+}
+
+export function normalizePurchaseRecommendation(row: Record<string, unknown>): PurchaseRecommendation {
+  const rawRisk = String(value(row, ['risk_status', 'riskStatus']) ?? '').toUpperCase();
+  const riskStatus: ScmStatus = rawRisk === 'CRITICAL'
+    ? 'CRITICAL'
+    : rawRisk === 'WARNING'
+      ? 'WARNING'
+      : rawRisk === 'SAFE'
+        ? 'SAFE'
+        : 'CALCULATION_UNAVAILABLE';
+  const trace = value(row, ['calculation_trace', 'calculationTrace']);
+  return {
+    itemId: String(value(row, ['item_id', 'itemId']) ?? '미정'),
+    itemName: String(value(row, ['item_name', 'itemName']) ?? '미정'),
+    itemGrade: textValue(row, ['item_grade', 'itemGrade']),
+    forecastQty: numberValue(row, ['forecast_qty', 'forecastQty']),
+    confirmedOrderQty: numberValue(row, ['confirmed_order_qty', 'confirmedOrderQty']),
+    demandBasisQty: numberValue(row, ['demand_basis_qty', 'demandBasisQty']),
+    availableInventory: numberValue(row, ['available_inventory', 'availableInventory']),
+    scheduledReceipt: numberValue(row, ['scheduled_receipt', 'scheduledReceipt']),
+    safetyStock: numberValue(row, ['safety_stock', 'safetyStock']),
+    effectiveLeadtime: numberValue(row, ['effective_leadtime', 'effectiveLeadtime']),
+    stockoutDate: textValue(row, ['stockout_date', 'stockoutDate']),
+    safetyBufferDays: numberValue(row, ['safety_buffer_days', 'safetyBufferDays']),
+    requiredQty: numberValue(row, ['required_qty', 'requiredQty']),
+    moq: numberValue(row, ['moq']),
+    packSize: numberValue(row, ['pack_size', 'packSize']),
+    recommendedQty: numberValue(row, ['recommended_qty', 'recommendedQty']),
+    recommendedOrderDate: textValue(row, ['recommended_order_date', 'recommendedOrderDate']),
+    immediateOrder: booleanValue(row, ['immediate_order', 'immediateOrder']),
+    orderTimingStatus: textValue(row, ['order_timing_status', 'orderTimingStatus']),
+    riskStatus,
+    calculationStatus: String(value(row, ['calculation_status', 'calculationStatus']) ?? 'CALCULATION_UNAVAILABLE'),
+    reasonCode: textValue(row, ['reason_code', 'reasonCode']),
+    forecastRunId: textValue(row, ['forecast_run_id', 'forecastRunId']),
+    modelVersion: textValue(row, ['model_version', 'modelVersion']),
+    backtestRunId: textValue(row, ['backtest_run_id', 'backtestRunId']),
+    forecastErrorSigma: numberValue(row, ['forecast_error_sigma', 'forecastErrorSigma']),
+    leadtimeStddev: numberValue(row, ['leadtime_stddev', 'leadtimeStddev']),
+    serviceLevel: numberValue(row, ['service_level', 'serviceLevel']),
+    zValue: numberValue(row, ['z_value', 'zValue']),
+    calculationTrace: trace && typeof trace === 'object' && !Array.isArray(trace) ? trace as Record<string, unknown> : null,
+  };
+}
+
 export function normalizeStockoutRisk(row: Record<string, unknown>): StockoutRisk {
   const stockoutDays = numberValue(row, ['stockout_days', 'stockoutDays', '소진예상일수']);
   const rawStatus = String(value(row, ['risk_status', 'status', '위험상태']) ?? '').toUpperCase();
   const reasonCode = value(row, ['reason', 'reason_code', '사유코드']);
-  const unavailable = stockoutDays === null || rawStatus === 'UNKNOWN' || rawStatus === 'CALCULATION_UNAVAILABLE';
+  const unavailable = rawStatus === 'UNKNOWN' || rawStatus === 'CALCULATION_UNAVAILABLE';
+  const status: ScmStatus = unavailable
+    ? 'CALCULATION_UNAVAILABLE'
+    : rawStatus === 'CRITICAL'
+      ? 'CRITICAL'
+      : rawStatus === 'WARNING'
+        ? 'WARNING'
+        : 'SAFE';
 
   return {
     itemId: String(value(row, ['item_id', 'itemId', '품목코드']) ?? '미정'),
     itemName: String(value(row, ['item_name', 'itemName', '품목명']) ?? '미정'),
     supplier: String(value(row, ['supplier_name', 'supplier', '법인', '공급처']) ?? '미정'),
+    supplierId: textValue(row, ['supplier_id', 'supplierId']),
     currentStock: numberValue(row, ['current_stock', 'currentStock', '현재고']),
     inboundQty: numberValue(row, ['inbound_qty', 'inboundQty', '입고예정']),
     availableQty: numberValue(row, ['available_qty', 'availableQty', '가용재고']),
     dailyUsageAvg: numberValue(row, ['daily_usage_avg', 'dailyUsageAvg', '일평균사용량']),
     plannedLeadTime: numberValue(row, ['planned_lead_time', 'plannedLeadTime', '계획리드타임']),
+    effectiveLeadTime: numberValue(row, ['effective_lead_time', 'effectiveLeadTime']),
+    leadTimeSource: textValue(row, ['lead_time_source', 'leadTimeSource']),
     stockoutDays,
     stockoutDate: String(value(row, ['stockout_date', 'stockoutDate', '소진예상일']) ?? '') || null,
-    status: unavailable ? 'CALCULATION_UNAVAILABLE' : rawStatus === 'CRITICAL' ? 'CRITICAL' : 'SAFE',
-    reasonCode: String(reasonCode ?? (unavailable ? 'CALCULATION_UNAVAILABLE' : '')) || undefined,
+    projectionAsOf: textValue(row, ['projection_as_of', 'projectionAsOf']),
+    daysOfSupply: numberValue(row, ['days_of_supply', 'daysOfSupply']),
+    monthsOfSupply: numberValue(row, ['months_of_supply', 'monthsOfSupply']),
+    scheduledReceipts: numberValue(row, ['scheduled_receipts', 'scheduledReceipts']),
+    confirmedSalesOrder: numberValue(row, ['confirmed_sales_order', 'confirmedSalesOrder']),
+    softAllocation: numberValue(row, ['soft_allocation', 'softAllocation']),
+    forecastDemand: numberValue(row, ['forecast_demand', 'forecastDemand']),
+    forecastSource: textValue(row, ['forecast_source', 'forecastSource']),
+    forecastModelId: textValue(row, ['forecast_model_id', 'forecastModelId']),
+    forecastModelVersion: textValue(row, ['forecast_model_version', 'forecastModelVersion']),
+    softAllocationStatus: textValue(row, ['soft_allocation_status', 'softAllocationStatus']),
+    confirmedSalesOrderStatus: textValue(row, ['confirmed_sales_order_status', 'confirmedSalesOrderStatus']),
+    status,
+    reasonCode: String(reasonCode ?? '') || null,
   };
 }
 
@@ -429,6 +736,7 @@ export function normalizeStockoutKpi(row: Record<string, unknown> | null): Stock
   return {
     items: numberValue(row, ['n_items', 'items', '품목수']),
     critical: numberValue(row, ['n_critical', 'critical', '위험품목수']),
+    warning: numberValue(row, ['n_warning', 'warning', '경고품목수']),
     safe: numberValue(row, ['n_safe', 'safe', '안전품목수']),
     unavailable: numberValue(row, ['n_unknown', 'n_unavailable', 'unknown', '계산불가수']),
     within30Days: numberValue(row, ['n_within_30d', 'within30Days', '30일이내']),

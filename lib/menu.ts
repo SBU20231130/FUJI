@@ -32,6 +32,8 @@ export const USER_MENU: MenuGroup[] = [
     items: [
       { id: 'leadtime', label: '리드타임 격차', href: '/analysis/leadtime', icon: 'leadtime' },
       { id: 'stockout', label: '재고 소진 위험', href: '/analysis/stockout', icon: 'stockout' },
+      { id: 'inventory-projection', label: 'Inventory Projection', href: '/analysis/inventory-projection', icon: 'stockout' },
+      { id: 'purchase-recommendation', label: '발주 추천', href: '/analysis/purchase-recommendation', icon: 'calculation' },
       { id: 'demand-profile', label: 'SKU 수요 프로파일', href: '/analysis/demand-profile', icon: 'demand' },
       { id: 'model-comparison', label: '모델 비교', href: '/analysis/model-comparison', icon: 'leadtime' },
     ],
@@ -39,6 +41,13 @@ export const USER_MENU: MenuGroup[] = [
 ];
 
 export const ADMIN_MENU: MenuGroup[] = [
+  {
+    id: 'scm-policies',
+    label: 'SCM POLICIES',
+    items: [
+      { id: 'leadtime-policy', label: 'Lead Time 정책', href: '/admin/policies/leadtime', icon: 'leadtime' },
+    ],
+  },
   {
     id: 'admin',
     label: 'ADMIN',

@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from './supabase';
-import { normalizeBacktestRun, normalizeChampionModel, normalizeComparisonPoint, normalizeDemandProfile, normalizeDemandProfileKpi, normalizeForecastRun, normalizeForecastSettings, normalizeLeadtimeGap, normalizeModelConfig, normalizeModelPerformance, normalizeStockoutKpi, normalizeStockoutRisk, type BacktestRun, type ChampionModel, type ComparisonPoint, type DemandProfile, type DemandProfileKpi, type ForecastRun, type ForecastSettings, type LeadtimeGap, type ModelConfig, type ModelPerformance, type StockoutKpi, type StockoutRisk } from './scm-model';
+import { normalizeBacktestRun, normalizeChampionModel, normalizeComparisonPoint, normalizeDemandProfile, normalizeDemandProfileKpi, normalizeForecastRun, normalizeForecastSettings, normalizeInventoryProjection, normalizeLeadtimeGap, normalizeLeadtimePolicy, normalizeLeadtimePolicyHistory, normalizeModelConfig, normalizeModelPerformance, normalizePurchaseRecommendation, normalizeSafetyStock, normalizeStockoutKpi, normalizeStockoutRisk, type BacktestRun, type ChampionModel, type ComparisonPoint, type DemandProfile, type DemandProfileKpi, type ForecastRun, type ForecastSettings, type InventoryProjectionRow, type LeadtimeGap, type LeadtimePolicy, type LeadtimePolicyHistory, type ModelConfig, type ModelPerformance, type PurchaseRecommendation, type SafetyStock, type StockoutKpi, type StockoutRisk } from './scm-model';
 
 export async function getDemandProfile(): Promise<{ rows: DemandProfile[]; error: string | null }> {
   try {
@@ -34,6 +34,28 @@ export async function getLeadtimeGap(): Promise<{ rows: LeadtimeGap[]; error: st
   }
 }
 
+export async function getLeadtimePolicy(): Promise<{ rows: LeadtimePolicy[]; error: string | null }> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.schema('analytics').from('v_leadtime_policy').select('*').order('supplier_id').order('item_id');
+    if (error) return { rows: [], error: error.message };
+    return { rows: (data ?? []).map((row) => normalizeLeadtimePolicy(row as Record<string, unknown>)), error: null };
+  } catch (error) {
+    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
+  }
+}
+
+export async function getLeadtimePolicyHistory(): Promise<{ rows: LeadtimePolicyHistory[]; error: string | null }> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.schema('analytics').from('v_leadtime_policy_history').select('*').order('changed_at', { ascending: false });
+    if (error) return { rows: [], error: error.message };
+    return { rows: (data ?? []).map((row) => normalizeLeadtimePolicyHistory(row as Record<string, unknown>)), error: null };
+  } catch (error) {
+    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
+  }
+}
+
 export async function getStockoutKpi(): Promise<{ data: StockoutKpi | null; error: string | null }> {
   try {
     const supabase = await createSupabaseServerClient();
@@ -45,15 +67,61 @@ export async function getStockoutKpi(): Promise<{ data: StockoutKpi | null; erro
   }
 }
 
-export async function getStockoutRisk(): Promise<{ rows: StockoutRisk[]; error: string | null }> {
+export async function getStockoutRisk(itemId?: string): Promise<{ rows: StockoutRisk[]; error: string | null }> {
   try {
     const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.schema('analytics').from('v_stockout_risk').select('*');
+    let query = supabase.schema('analytics').from('v_stockout_risk').select('*').order('item_id');
+    if (itemId) query = query.eq('item_id', itemId);
+    const { data, error } = await query;
     if (error) return { rows: [], error: error.message };
     return { rows: (data ?? []).map((row) => normalizeStockoutRisk(row as Record<string, unknown>)), error: null };
   } catch (error) {
     return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
   }
+}
+
+export async function getInventoryProjection(itemId?: string): Promise<{ rows: InventoryProjectionRow[]; error: string | null }> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    let query = supabase.schema('analytics').from('v_inventory_projection').select('*').order('item_id').order('period');
+    if (itemId) query = query.eq('item_id', itemId);
+    const { data, error } = await query;
+    if (error) return { rows: [], error: error.message };
+    return { rows: (data ?? []).map((row) => normalizeInventoryProjection(row as Record<string, unknown>)), error: null };
+  } catch (error) {
+    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
+  }
+}
+
+export async function getSafetyStock(itemId?: string): Promise<{ rows: SafetyStock[]; error: string | null }> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    let query = supabase.schema('analytics').from('v_safety_stock').select('*').order('item_id');
+    if (itemId) query = query.eq('item_id', itemId);
+    const { data, error } = await query;
+    if (error) return { rows: [], error: error.message };
+    return { rows: (data ?? []).map((row) => normalizeSafetyStock(row as Record<string, unknown>)), error: null };
+  } catch (error) {
+    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
+  }
+}
+
+export async function getPurchaseRecommendations(itemId?: string): Promise<{ rows: PurchaseRecommendation[]; error: string | null }> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    let query = supabase.schema('analytics').from('v_purchase_recommendation').select('*').order('item_id');
+    if (itemId) query = query.eq('item_id', itemId);
+    const { data, error } = await query;
+    if (error) return { rows: [], error: error.message };
+    return { rows: (data ?? []).map((row) => normalizePurchaseRecommendation(row as Record<string, unknown>)), error: null };
+  } catch (error) {
+    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
+  }
+}
+
+export async function getPurchaseRecommendation(itemId: string): Promise<{ data: PurchaseRecommendation | null; error: string | null }> {
+  const result = await getPurchaseRecommendations(itemId);
+  return { data: result.rows[0] ?? null, error: result.error };
 }
 
 export async function getForecastSettings(): Promise<{ data: ForecastSettings | null; error: string | null }> {
