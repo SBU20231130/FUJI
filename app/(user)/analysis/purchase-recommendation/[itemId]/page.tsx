@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import AnalysisFrame from '@/components/analysis/analysis-frame';
 import Badge from '@/components/ui/badge';
 import DataTable, { formatNumber, type Column } from '@/components/ui/data-table';
@@ -16,8 +17,13 @@ function NumberValue({ value, reasonCode, suffix = '' }: { value: number | null;
 
 function TraceTable({ trace }: { trace: Record<string, unknown> | null }) {
   if (!trace) return <EmptyValue reasonCode="CALCULATION_TRACE_UNAVAILABLE" />;
-  const rows = Object.entries(trace).map(([key, value]) => ({ key, value: value === null || value === undefined || value === '' ? '—' : typeof value === 'object' ? JSON.stringify(value) : String(value) }));
-  return <DataTable columns={[{ key: 'key', label: '항목' }, { key: 'value', label: '값' }]} rows={rows} rowKey={(row) => row.key} />;
+  const rows: { key: string; value: ReactNode }[] = Object.entries(trace).map(([key, value]) => ({
+    key,
+    value: value === null || value === undefined || value === ''
+      ? <EmptyValue reasonCode="CALCULATION_UNAVAILABLE" />
+      : typeof value === 'object' ? JSON.stringify(value) : String(value),
+  }));
+  return <DataTable columns={[{ key: 'key', label: '항목' }, { key: 'value', label: '값', render: (row) => row.value }]} rows={rows} rowKey={(row) => row.key} />;
 }
 
 const projectionColumns: Column<InventoryProjectionRow>[] = [
@@ -73,7 +79,7 @@ export default async function PurchaseRecommendationDetailPage({ params }: { par
         <KpiCard label="기준 수요" value={<NumberValue value={recommendation.demandBasisQty} reasonCode={reasonCode} />} foot="Forecast / 확정 수주 중 큰 값" />
         <KpiCard label="Safety Stock" value={<NumberValue value={recommendation.safetyStock} reasonCode={reasonCode} />} foot="Z × σDLT" />
         <KpiCard label="필요 수량" value={<NumberValue value={recommendation.requiredQty} reasonCode={reasonCode} />} foot="DB 계산 결과" />
-        <KpiCard label="추천 발주량" value={recommendation.recommendedQty === null ? <EmptyValue reasonCode={reasonCode ?? undefined} /> : recommendation.recommendedQty} foot={recommendation.immediateOrder ? <Badge status="CRITICAL" label="즉시 발주" /> : recommendation.orderTimingStatus ?? '—'} status={recommendation.calculationStatus === 'CALCULATION_UNAVAILABLE' ? 'CALCULATION_UNAVAILABLE' : recommendation.immediateOrder ? 'CRITICAL' : 'SAFE'} />
+        <KpiCard label="추천 발주량" value={recommendation.recommendedQty === null ? <EmptyValue reasonCode={reasonCode ?? undefined} /> : recommendation.recommendedQty} foot={recommendation.immediateOrder ? <Badge status="CRITICAL" label="즉시 발주" /> : recommendation.orderTimingStatus ?? <EmptyValue reasonCode="CALCULATION_UNAVAILABLE" />} status={recommendation.calculationStatus === 'CALCULATION_UNAVAILABLE' ? 'CALCULATION_UNAVAILABLE' : recommendation.immediateOrder ? 'CRITICAL' : 'SAFE'} />
       </div>
 
       <div className="section grid grid-2">
@@ -82,7 +88,7 @@ export default async function PurchaseRecommendationDetailPage({ params }: { par
             <div><span className="muted">Forecast</span><strong><NumberValue value={recommendation.forecastQty} reasonCode={reasonCode} /></strong></div>
             <div><span className="muted">확정 수주</span><strong><NumberValue value={recommendation.confirmedOrderQty} reasonCode={reasonCode} /></strong></div>
             <div><span className="muted">기준 수요</span><strong><NumberValue value={recommendation.demandBasisQty} reasonCode={reasonCode} /></strong></div>
-            <div><span className="muted">Forecast run / model</span><strong>{recommendation.forecastRunId ?? <EmptyValue reasonCode="NO_FORECAST" />} · {recommendation.modelVersion ?? '—'}</strong></div>
+            <div><span className="muted">Forecast run / model</span><strong>{recommendation.forecastRunId ?? <EmptyValue reasonCode="NO_FORECAST" />} · {recommendation.modelVersion ?? <EmptyValue reasonCode="NO_FORECAST" />}</strong></div>
           </div>
         </Panel>
         <Panel title="2. Stockout" description="STEP 9의 기간별 Projection과 동일한 재고·리드타임 결과를 연결합니다.">
@@ -105,7 +111,7 @@ export default async function PurchaseRecommendationDetailPage({ params }: { par
             <div><span className="muted">계산 상태</span><strong>{safetyStock.calculationStatus === 'READY' ? <Badge status="SAFE" label="READY" /> : <Badge status="CALCULATION_UNAVAILABLE" />}</strong></div>
             <div><span className="muted">σDLT</span><strong><NumberValue value={safetyStock.sigmaDlt} reasonCode={safetyStock.reasonCode} /></strong></div>
             <div><span className="muted">Safety Stock</span><strong><NumberValue value={safetyStock.safetyStock} reasonCode={safetyStock.reasonCode} /></strong></div>
-            <div><span className="muted">사유 코드</span><strong>{safetyStock.reasonCode ?? '—'}</strong></div>
+            <div><span className="muted">사유 코드</span><strong>{safetyStock.reasonCode ?? <EmptyValue reasonCode="CALCULATION_UNAVAILABLE" />}</strong></div>
           </div>
           <SafetyStockInputs row={safetyStock} />
         </> : <EmptyValue reasonCode="NO_SAFETY_STOCK_DATA" />}
@@ -116,7 +122,7 @@ export default async function PurchaseRecommendationDetailPage({ params }: { par
           <div><span className="muted">가용 재고 / 예정 입고</span><strong><NumberValue value={recommendation.availableInventory} reasonCode={reasonCode} /> / <NumberValue value={recommendation.scheduledReceipt} reasonCode={reasonCode} /></strong></div>
           <div><span className="muted">MOQ / Pack Size</span><strong><NumberValue value={recommendation.moq} reasonCode="NO_ITEM_POLICY" /> / <NumberValue value={recommendation.packSize} reasonCode="NO_ITEM_POLICY" /></strong></div>
           <div><span className="muted">추천 발주일</span><strong>{recommendation.immediateOrder ? <Badge status="CRITICAL" label="즉시 발주" /> : recommendation.recommendedOrderDate ?? <EmptyValue reasonCode={reasonCode ?? undefined} />}</strong></div>
-          <div><span className="muted">계산 상태 / 사유</span><strong>{recommendation.calculationStatus} · {recommendation.reasonCode ?? '—'}</strong></div>
+          <div><span className="muted">계산 상태 / 사유</span><strong>{recommendation.calculationStatus} · {recommendation.reasonCode ?? <EmptyValue reasonCode="CALCULATION_UNAVAILABLE" />}</strong></div>
         </div>
       </Panel>
 
