@@ -53,7 +53,7 @@ drop view if exists analytics.v_safety_stock;
 drop view if exists core.v_service_level_effective;
 drop view if exists core.v_forecast_error_sigma;
 
-create view core.v_service_level_effective with (security_invoker = true) as
+create view core.v_service_level_effective as
 select i.item_id,
        ip.item_grade,
        ip.moq,
@@ -71,7 +71,7 @@ select i.item_id,
 
 -- STEP 7의 유효한 Champion 성능을 우선 사용하고, 없으면 최근 유효 성능을 사용합니다.
 -- RMSE를 Forecast error variability(sigma_D)로 사용하며, RMSE가 없는 경우 임의값을 만들지 않습니다.
-create view core.v_forecast_error_sigma with (security_invoker = true) as
+create view core.v_forecast_error_sigma as
 with champion_performance as (
   select distinct on (c.item_id)
          c.item_id,
@@ -116,7 +116,7 @@ select * from champion_performance
 union all
 select * from recent_performance;
 
-create view analytics.v_safety_stock with (security_invoker = true) as
+create view analytics.v_safety_stock as
 with policy as (
   select max(safety_buffer_days) filter (where active) as safety_buffer_days
     from core.policy_config
@@ -209,7 +209,7 @@ select item_id,
        reason_code
   from calculated;
 
-create view analytics.v_purchase_recommendation with (security_invoker = true) as
+create view analytics.v_purchase_recommendation as
 with base as (
   select r.item_id,
          r.item_name,
@@ -351,4 +351,3 @@ revoke all on core.service_level_policy, core.v_service_level_effective,
 revoke all on analytics.v_safety_stock, analytics.v_purchase_recommendation from anon;
 
 notify pgrst, 'reload schema';
-

@@ -251,7 +251,7 @@ revoke all on core.v_leadtime_effective, core.v_inventory_snapshot,
   core.v_inbound_schedule, core.v_inbound_qty, core.v_confirmed_sales_order,
   core.v_soft_allocation from anon;
 
-create view analytics.v_inventory_projection with (security_invoker = true) as
+create view analytics.v_inventory_projection as
 with recursive
 setting as (
   select upper(coalesce((select granularity from core.forecast_setting where setting_key = 'DEFAULT' limit 1), 'DAILY')) as granularity
@@ -588,7 +588,7 @@ select p.item_id,
   from projected p
   join classified c on c.item_id = p.item_id;
 
-create view analytics.v_stockout_risk with (security_invoker = true) as
+create view analytics.v_stockout_risk as
 with summary as (
   select item_id,
          min(item_name) as item_name,
