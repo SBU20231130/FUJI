@@ -339,6 +339,66 @@ export type ComparisonPoint = {
   validationStatus: string;
 };
 
+export type ShipmentTrend = {
+  itemCode: string;
+  itemName: string | null;
+  period: string | null;
+  shipmentQty: number | null;
+  orderQty: number | null;
+  shipmentCount: number | null;
+  reasonCode: string | null;
+};
+
+export type DemandProfileRt = {
+  itemCode: string;
+  itemName: string | null;
+  validDays: number | null;
+  totalDemandQty: number | null;
+  averageDailyDemand: number | null;
+  demandSd: number | null;
+  cv: number | null;
+  trend: number | null;
+  reasonCode: string | null;
+};
+
+export type OlAccuracy = {
+  modelBase: string | null;
+  period: string | null;
+  fiscalYear: string | null;
+  salesWape: number | null;
+  scmBias: number | null;
+  salesMae: number | null;
+  salesRmse: number | null;
+  scmWape: number | null;
+  scmMae: number | null;
+  scmRmse: number | null;
+  reasonCode: string | null;
+};
+
+export type BomRequirement = {
+  modelBase: string | null;
+  itemCode: string | null;
+  itemName: string | null;
+  partRole: string | null;
+  requirementQty: number | null;
+  bomQty: number | null;
+  attachmentRate: number | null;
+  commonFlag: string | null;
+  commonLabel: '복수 기종 공용' | null;
+  reasonCode: string | null;
+};
+
+export type PartLinkage = {
+  itemCode: string;
+  hocCode: string | null;
+  hocName: string | null;
+  modelBase: string | null;
+  partCode: string | null;
+  partName: string | null;
+  linkageType: string | null;
+  reasonCode: string | null;
+};
+
 function value(row: Record<string, unknown>, keys: string[]) {
   for (const key of keys) {
     if (row[key] !== undefined && row[key] !== null && row[key] !== '') return row[key];
@@ -521,6 +581,77 @@ export function normalizeComparisonPoint(row: Record<string, unknown>): Comparis
     predictionLower: numberValue(row, ['prediction_lower', 'predictionLower']),
     predictionUpper: numberValue(row, ['prediction_upper', 'predictionUpper']),
     validationStatus: String(value(row, ['validation_status', 'validationStatus']) ?? 'ACTUAL_UNAVAILABLE'),
+  };
+}
+
+export function normalizeShipmentTrend(row: Record<string, unknown>): ShipmentTrend {
+  return {
+    itemCode: String(value(row, ['item_code', 'itemCode', 'sku', '품목코드']) ?? '미정'),
+    itemName: textValue(row, ['item_name', 'itemName', '품목명']),
+    period: textValue(row, ['period', 'period_start', 'month', 'shipment_month', '기준월']),
+    shipmentQty: numberValue(row, ['shipment_qty', 'shipment_quantity', 'shipped_qty', 'actual_qty', '출하수량']),
+    orderQty: numberValue(row, ['order_qty', 'ordered_qty', 'ol_qty', '발주수량']),
+    shipmentCount: numberValue(row, ['shipment_count', 'n_shipments', 'shipment_rows', '출하건수']),
+    reasonCode: textValue(row, ['reason_code', 'reasonCode', '사유코드']),
+  };
+}
+
+export function normalizeDemandProfileRt(row: Record<string, unknown>): DemandProfileRt {
+  return {
+    itemCode: String(value(row, ['item_code', 'itemCode', 'sku', '품목코드']) ?? '미정'),
+    itemName: textValue(row, ['item_name', 'itemName', '품목명']),
+    validDays: numberValue(row, ['valid_days', 'n_valid_days', 'days', '유효일수']),
+    totalDemandQty: numberValue(row, ['total_demand_qty', 'demand_qty', 'total_qty', '총수요량']),
+    averageDailyDemand: numberValue(row, ['average_daily_demand', 'daily_demand_avg', 'avg_daily_demand', '일평균수요']),
+    demandSd: numberValue(row, ['demand_sd', 'daily_demand_sd', 'sd', '수요표준편차']),
+    cv: numberValue(row, ['cv', 'coefficient_of_variation', '변동계수']),
+    trend: numberValue(row, ['trend', 'trend_rate', 'trend_per_period', '추세']),
+    reasonCode: textValue(row, ['reason_code', 'reasonCode', '사유코드']),
+  };
+}
+
+export function normalizeOlAccuracy(row: Record<string, unknown>): OlAccuracy {
+  return {
+    modelBase: textValue(row, ['model_base', 'modelBase', 'model', '기종']),
+    period: textValue(row, ['period', 'period_start', 'month', '기준월']),
+    fiscalYear: textValue(row, ['fiscal_year', 'fiscalYear', 'fy', '회계연도']),
+    salesWape: numberValue(row, ['sales_wape', 'salesWAPE', 'wape_sales']),
+    scmBias: numberValue(row, ['scm_bias', 'scmBias', 'bias_scm']),
+    salesMae: numberValue(row, ['sales_mae', 'salesMAE', 'mae_sales']),
+    salesRmse: numberValue(row, ['sales_rmse', 'salesRMSE', 'rmse_sales']),
+    scmWape: numberValue(row, ['scm_wape', 'scmWAPE', 'wape_scm']),
+    scmMae: numberValue(row, ['scm_mae', 'scmMAE', 'mae_scm']),
+    scmRmse: numberValue(row, ['scm_rmse', 'scmRMSE', 'rmse_scm']),
+    reasonCode: textValue(row, ['reason_code', 'reasonCode', '사유코드']),
+  };
+}
+
+export function normalizeBomRequirement(row: Record<string, unknown>): BomRequirement {
+  const commonFlag = textValue(row, ['common_flag', 'commonFlag', '공용구분']);
+  return {
+    modelBase: textValue(row, ['model_base', 'modelBase', 'model', '기종']),
+    itemCode: textValue(row, ['item_code', 'itemCode', 'part_code', 'partCode', '품목코드']),
+    itemName: textValue(row, ['item_name', 'itemName', 'part_name', 'partName', '품목명']),
+    partRole: textValue(row, ['part_role', 'partRole', 'role', '부품역할']),
+    requirementQty: numberValue(row, ['requirement_qty', 'required_qty', 'require_qty', '소요량']),
+    bomQty: numberValue(row, ['bom_qty', 'quantity_per_model', 'qty_per_model', 'BOM수량']),
+    attachmentRate: numberValue(row, ['attachment_rate', 'attach_rate', '장착율']),
+    commonFlag,
+    commonLabel: commonFlag?.toUpperCase() === 'COMMON' ? '복수 기종 공용' : null,
+    reasonCode: textValue(row, ['reason_code', 'reasonCode', '사유코드']),
+  };
+}
+
+export function normalizePartLinkage(row: Record<string, unknown>): PartLinkage {
+  return {
+    itemCode: String(value(row, ['item_code', 'itemCode', 'sku', '품목코드']) ?? '미정'),
+    hocCode: textValue(row, ['hoc_code', 'hocCode', 'representative_item_code', 'representativeCode', '발주대표코드']),
+    hocName: textValue(row, ['hoc_name', 'hocName', 'representative_item_name', 'representativeName', '발주대표명']),
+    modelBase: textValue(row, ['model_base', 'modelBase', 'model', '기종']),
+    partCode: textValue(row, ['part_code', 'partCode', 'component_code', '부품코드']),
+    partName: textValue(row, ['part_name', 'partName', 'component_name', '부품명']),
+    linkageType: textValue(row, ['linkage_type', 'linkageType', 'relation', '관계']),
+    reasonCode: textValue(row, ['reason_code', 'reasonCode', '사유코드']),
   };
 }
 
