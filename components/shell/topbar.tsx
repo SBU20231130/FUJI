@@ -1,12 +1,8 @@
-import { Search } from 'lucide-react';
-import { signOutAction } from '@/app/(auth)/login/actions';
+import { Bell, History, LogOut } from 'lucide-react';
+import type { AppRole } from '@/lib/menu';
+import { logoutAction } from '@/lib/auth-actions';
 
-export default function Topbar({ title = '월간 발주계획', period = '2026.09' }: { title?: string; period?: string }) {
-  return (
-    <header className="topbar">
-      <div><div className="eyebrow">MONTHLY PROCUREMENT CONTROL</div><h1>{title}</h1></div>
-      <div className="global-search" aria-hidden="true"><Search size={17} strokeWidth={2} /><span>공급망 노드, 예측, 알림 검색...</span></div>
-      <div className="top-meta"><span className="local-badge">SUPABASE LIVE</span><span>기준월 <b>{period}</b></span><form action={signOutAction}><button type="submit" className="logout-button">로그아웃</button></form></div>
-    </header>
-  );
+export default function Topbar({ name, role }: { name: string; role: AppRole }) {
+  const initials = name.trim().slice(0, 2).toUpperCase() || 'SC';
+  return <header className="topbar"><div><div className="eyebrow">SCM INTELLIGENCE</div><h1>공급망 운영 콘솔</h1></div><div className="top-meta"><span className="local-badge">{role}</span><span>기준월 <b>2026.09</b></span><button className="icon-button" type="button" aria-label="알림"><Bell size={16} /></button><button className="icon-button" type="button" aria-label="변경 이력"><History size={16} /></button><span className="avatar" title={name}>{initials}</span><form action={logoutAction}><button className="icon-button" type="submit" aria-label="로그아웃"><LogOut size={16} /></button></form></div></header>;
 }

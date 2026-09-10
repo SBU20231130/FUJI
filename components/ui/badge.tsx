@@ -1,12 +1,9 @@
-export type Status = 'SAFE' | 'WARNING' | 'CRITICAL' | 'CALCULATION_UNAVAILABLE';
+import type { ReactNode } from 'react';
+import type { SystemStatus } from '@/lib/status';
+import { STATUS_LABELS } from '@/lib/status';
 
-const labels: Record<Status, string> = {
-  SAFE: 'SAFE',
-  WARNING: 'WARNING',
-  CRITICAL: 'CRITICAL',
-  CALCULATION_UNAVAILABLE: '계산 불가',
-};
+const badgeClass: Record<SystemStatus, string> = { SAFE: 'green', WARNING: 'amber', CRITICAL: 'red', CALCULATION_UNAVAILABLE: 'gray' };
 
-export default function Badge({ status, label }: { status: Status; label?: string }) {
-  return <span className={`badge badge--${status.toLowerCase().replaceAll('_', '-')}`}>{label ?? labels[status]}</span>;
+export default function Badge({ status, children }: { status?: SystemStatus; children?: ReactNode }) {
+  return <span className={`tag ${status ? badgeClass[status] : 'gray'}`}>{children ?? (status ? STATUS_LABELS[status] : null)}</span>;
 }

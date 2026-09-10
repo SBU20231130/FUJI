@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
 export default function InsightBanner({ title, children }: { title: string; children: ReactNode }) {
-  return <div className="insight-banner"><div><strong>{title}</strong><span>{children}</span></div></div>;
+  return <aside className="insight-banner"><span className="insight-mark">i</span><div><strong>{title}</strong><p>{children}</p></div></aside>;
 }
+

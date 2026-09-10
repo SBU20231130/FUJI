@@ -25,62 +25,48 @@ cp <이_폴더>/app/analysis/leadtime/page.tsx app/analysis/leadtime/
 이 세 가지가 **없어야** 참가자 실습이 성립합니다.
 
 ```bash
-grep -n "StockoutRisk" lib/scm-model.ts     # 구현된 정규화 모델 확인
-grep -n "getStockoutRisk" lib/scm.ts        # analytics 조회 함수 확인
-ls app/\(user\)/analysis/stockout            # STEP 1 분석 화면 확인
+grep -n "StockoutRisk" lib/scm-model.ts     # 주석만 나와야 함
+grep -n "getStockoutRisks" lib/scm.ts       # 주석만 나와야 함
+ls app/analysis/stockout                    # No such file 이어야 함
 ```
 
 `lib/scm-model.ts` 끝부분과 `lib/scm.ts` 중간에 "여기에 만듭니다" 주석이 있습니다.
 참가자가 어디에 넣을지 헤매지 않도록 남겨둔 표시입니다.
 
-## Supabase Auth / RBAC 초기 설정
+## Supabase 권한 부여 (덤프를 새로 복원했다면 필수)
 
-STEP 2 migration은 `core.app_user`, `core.audit_log`, Auth 사용자 생성 trigger,
-`core.is_admin()` 및 관리자 전용 RLS를 구성합니다. `anon`에는 `core`와 `analytics`
-권한을 주지 않습니다. 관련 migration은 `supabase/migrations/20260828000100`부터
-`20260828000500`까지입니다.
-
-```
-supabase/migrations/20260828000100_add_auth_rbac_audit.sql
-supabase/migrations/20260828000200_harden_leadtime_rpc.sql
-supabase/migrations/20260828000300_harden_authenticated_read_policies.sql
-supabase/migrations/20260828000400_expose_data_api_schemas.sql
-supabase/migrations/20260828000500_refresh_data_api_schema_cache.sql
-```
-
-현재 프로젝트는 Auth 사용자가 없는 상태이므로, Supabase Dashboard → Authentication
-→ Users에서 첫 사용자를 만든 뒤 SQL Editor에서 최초 관리자 1명을 지정해야 합니다.
-
-```sql
-update core.app_user
-   set role = 'ADMIN'
- where lower(email) = lower('관리자 이메일');
-```
-
-이후 로그인하면 `/admin/users`에서 다른 사용자의 ADMIN/USER 및 활성 상태를 변경할 수
-있습니다. role/active 변경은 DB trigger가 `core.audit_log`에 자동 기록합니다.
-
-권한 점검용 SQL은 `sql/01-grants.sql`, `sql/02-policies.sql`에 있으며, 이 파일들은
-anon 전체 허용 정책을 다시 만들지 않도록 STEP 2 기준으로 갱신되어 있습니다.
-
-## STEP 3 Forecast 데이터 격리
-
-STEP 3 migration은 다음 구조를 추가합니다.
+`dump.sql` 에는 GRANT 문이 하나도 없습니다.
+덤프를 복원하면 스키마와 뷰가 전부 `postgres` 소유로만 만들어지고 `anon` 롤에는
+권한이 붙지 않습니다. 이 상태에서는 Settings → API → **Exposed schemas** 에
+`core`, `analytics` 를 넣어도 화면에 이 오류가 뜹니다.
 
 ```
-raw.usage_history → core.v_train_demand → Forecast / Demand Profile
-raw.usage_history → core.v_test_actual → Backtest scoring
+permission denied for schema analytics   (42501)
 ```
 
-`core.forecast_setting`의 기간이 학습·검증 경계이며, 현재 데이터 범위를 기준으로
-초기 80%/20% 날짜를 만들고 관리자가 수정할 수 있습니다. 정책값은
-`core.policy_config`, `core.outlier_rule`, `core.item_policy`에서 관리합니다.
-`analytics.v_data_coverage`와 `analytics.v_forecast_settings`에서 기간 커버리지와
-격리 상태를 확인할 수 있고, 관리자 화면은 `/admin/forecast-settings`입니다.
+> Exposed schemas 와 GRANT 는 별개입니다.
+> 노출 설정은 PostgREST 가 그 스키마로 **라우팅할지**만 정하고,
+> 실제 접근은 Postgres 롤 권한이 따로 필요합니다.
+> 노출만 확인하고 넘어가면 이 오류를 못 찾습니다.
 
-실제 적용 migration은 `supabase/migrations/20260828000600_add_forecast_data_model.sql`
-및 후속 권한 최적화 파일입니다. `raw`는 Data API 직접 조회 대상이 아니며,
-Forecast 학습 코드는 `core.v_train_demand`만 사용해야 합니다.
+Supabase → **SQL Editor** 에서 실행합니다.
+
+```
+sql/01-grants.sql     읽기 권한 (필수)
+sql/02-policies.sql   쓰기 정책 (앱에서 leadtime_plan / usage_profile 을 저장할 때만)
+```
+
+`01-grants.sql` 은 마지막에 확인 쿼리가 붙어 있습니다. 두 값이 모두 `true` 여야 합니다.
+
+```
+anon_schema_ok | anon_view_ok
+---------------+--------------
+ t             | t
+```
+
+`02-policies.sql` 은 `core.leadtime_plan` 과 `core.usage_profile` 의 RLS 정책입니다.
+두 테이블은 덤프에서 RLS 만 켜져 있고 정책이 없어서, 앱에서는 읽기도 쓰기도 막힙니다.
+SQL Editor / Table Editor 로만 값을 바꿀 계획이면 실행하지 않아도 됩니다.
 
 ## 빌드 확인
 
@@ -103,7 +89,7 @@ npm run dev
 | 주소 | 기대 |
 |---|---|
 | `/analysis/leadtime` | 공급처 12행 |
-| `/analysis/stockout` | 로그인 후 재고 소진 위험 화면 |
+| `/analysis/stockout` | 404 (참가자가 오후에 만듭니다) |
 | `/api/health/supabase` | `{"configured": true}` |
 
 `/analysis/leadtime` 이 "조회에 실패했습니다" 로 나오면 화면 아래 사유를 봅니다.

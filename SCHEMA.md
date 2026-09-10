@@ -81,21 +81,6 @@
 `item_id`, `item_name`, `item_type`, `supplier_id`, `valid_days`,
 `daily_usage_avg`, `daily_usage_sd`, `cv`, `stability`, `source`
 
-### `v_sku_demand_monthly_grid` · STEP 5
-`core.v_train_demand`와 활성 `forecast_setting`의 학습기간을 월 단위로 펼친
-`item_id × period_start` Grid. 수요 기록이 없는 기간은 구조적 0으로 표시하고,
-원본 행의 수량이 null인 경우는 `quantity`를 null로 유지한다.
-
-### `v_sku_demand_profile` · STEP 5
-학습기간 전용 SKU 수요 특성. `adi`, `cv`, `cv_squared`, `zero_demand_rate`,
-`trend`, `recent_change_rate`, `peak_period`, `demand_type`, `seasonality`,
-`reason_code`, `stability`를 제공한다. `demand_type`은
-`SMOOTH`, `INTERMITTENT`, `ERRATIC`, `LUMPY` 코드만 사용한다.
-
-### `v_demand_profile_kpi` · STEP 5
-`total_items`, 분류별 건수, `n_croston_needed`(INTERMITTENT + LUMPY),
-`n_calculation_unavailable`를 한 행으로 제공한다.
-
 ### `v_usage_anomaly`
 이상 사용 이력. 39행.
 `usage_id`, `item_id`, `use_date`, `qty`, `avg_qty`, `ratio`, `note`,
@@ -104,22 +89,6 @@
 ---
 
 ## core — 정제와 계산
-
-### STEP 3 정책 및 Forecast 설정
-
-| 객체 | 역할 |
-|---|---|
-| `policy_config` | 공통 service level, review period, safety buffer와 확장 설정 |
-| `outlier_rule` | 프로젝트성 수요·반품·중복 등 학습 제외 규칙 |
-| `item_policy` | 품목별 MOQ, pack size, grade, service level |
-| `forecast_setting` | train/test 기간과 granularity. 날짜는 코드에 두지 않음 |
-| `v_train_demand` | `forecast_setting.train_start ~ train_end` 학습 입력 |
-| `v_test_actual` | `forecast_setting.test_start ~ test_end` 검증 Actual |
-
-학습 데이터와 검증 데이터는 동일한 `raw.usage_history`에서 오지만 view의 기간 조건으로
-분리됩니다. `core.v_usage_effective`는 `core.v_train_demand`만 사용하므로 test Actual이
-Demand Profile 계산에 들어가지 않습니다. 기간과 행 수는 `analytics.v_data_coverage`,
-관리자용 요약은 `analytics.v_forecast_settings`에서 확인합니다.
 
 ### `leadtime_plan` (테이블 · 쓰기 가능)
 오전 분석에서 확정한 계획 리드타임.
@@ -130,6 +99,16 @@ Demand Profile 계산에 들어가지 않습니다. 기간과 행 수는 `analyt
 ### `usage_profile` (테이블 · 쓰기 가능)
 오전 분석에서 확정한 일평균 사용량.
 `item_id`(PK), `valid_days`, `daily_usage_avg`, `daily_usage_sd`, `cv`, `confirmed_at`
+
+### `agent_conversation` · `agent_message` (테이블 · STEP 16)
+AI Agent 의 대화와 문답 기록.
+`agent_conversation`: `conversation_id`(PK), `user_id`, `title`, `created_at`, `last_message_at`
+`agent_message`: `message_id`(PK), `conversation_id`, `user_id`, `question`, `answer`(jsonb),
+`tool_trace`(jsonb), `guardrail`(jsonb), `token_usage`(jsonb), `error`, `created_at`
+
+**본인 대화만 읽고 씁니다.** 관리자는 감사 목적으로 전체를 읽습니다(RLS).
+뷰를 두지 않는 이유는 이 프로젝트의 뷰가 소유자 권한으로 돌아 RLS 가 적용되지 않기 때문입니다.
+적용 파일 — `supabase/migrations/20260909000100_step16_agent_conversation.sql`
 
 ### 그 밖의 core 뷰
 
@@ -142,7 +121,61 @@ v_usage_effective        확정값 → 없으면 정제 기준 평균
 v_item_master            품목코드 정규화 · 중복 제거
 v_stock_on_hand          창고 표기 통일 후 현재고 합산
 v_inbound_qty            진행 중 선적 = 입고예정
+v_train_demand           Forecast·Demand Profile 학습 전용 수요 기간
+v_test_actual            Backtest scoring 전용 검증 Actual 기간
 ```
+
+### STEP 3 정책·Forecast 설정
+
+| 객체 | 역할 |
+|---|---|
+| `core.policy_config` | 서비스 레벨, 검토 주기, 안전 버퍼 등 공통 운영 정책 |
+| `core.outlier_rule` | 프로젝트·반품·중복 등 학습 제외 규칙 |
+| `core.item_policy` | 품목별 MOQ, pack size, grade, 서비스 레벨 |
+| `core.forecast_setting` | 활성 학습/검증 기간과 DAY/WEEK/MONTH granularity |
+
+`core.v_train_demand`와 `core.v_test_actual`은 `core.forecast_setting`의 활성 기간만 사용한다.
+기간이 비어 있거나 train/test가 겹치면 **두 뷰 모두 0행**을 반환한다. Forecast·Demand Profile은 전자만,
+Backtest scoring은 후자만 읽는다. `raw.usage_history`를 화면이나 Forecast 코드에서 직접 읽지 않는다.
+
+`analytics.v_data_coverage`는 전체 데이터 기간, 설정 기간, train/test 행수, 각 window 유효성,
+격리 상태를 한 행으로 제공한다.
+
+### STEP 5 수요 프로파일
+
+| 객체 | 역할 |
+|---|---|
+| `analytics.v_sku_demand_profile` | 학습 기간 월별 grid에서 SKU별 ADI, CV², Zero-demand rate, 추세, 최근 변화, Peak month, 수요 유형을 계산 |
+| `analytics.v_demand_profile_kpi` | SMOOTH / INTERMITTENT / ERRATIC / LUMPY 수와 Croston 후보 수를 요약 |
+
+수요 프로파일은 **반드시 `core.v_train_demand`만** 사용합니다. `core.v_test_actual`은 Backtest scoring 전용입니다.
+기록이 없는 월은 기간 grid의 `0`으로 표현하지만, 원본 수량이 null인 경우에는 `null`과 reason code를 유지합니다.
+계절성은 24개월 미만에서 `false`가 아니라 `null + INSUFFICIENT_PERIODS`로 표시합니다.
+
+### STEP 6 SQL Baseline Forecast
+
+| 객체 | 역할 |
+|---|---|
+| `core.model_config` | 모델 enabled 상태, 적용 수요 유형, DB 파라미터를 관리하는 registry |
+| `core.model_version` | Forecast Run마다 사용한 모델 정의와 파라미터의 불변 snapshot |
+| `core.forecast_run` | 실행 상태, 학습 기간, data snapshot, 실행자, 집계값을 보관 |
+| `core.forecast_result` | Run·모델·SKU·기간별 P50/P80/P90/sigma 저장 |
+| `core.run_baseline_forecast()` | ADMIN 전용 SQL Baseline 실행 함수 |
+
+`core.run_baseline_forecast()`는 `core.v_train_demand`의 월별 grid만 읽습니다. MA_3M, MA_6M,
+WMA_3M(최근순 3:2:1), PY_SAME_MONTH, SEASONAL_NAIVE 결과는 실행 시 저장되며 화면 조회마다 다시 계산하지 않습니다.
+기본 SQL Baseline 모델의 적용 수요 유형은 `SMOOTH`, `ERRATIC`으로 registry에 저장됩니다. INTERMITTENT/LUMPY는
+STEP 8 Croston 계열 엔진이 추가될 때 registry 설정으로 연결합니다.
+
+`analytics.v_forecast_run`의 `is_stale`은 run의 `data_snapshot_at` 이후 수요 관련 IMPORT가 완료됐거나 `stale_at`이 기록된 경우 true입니다.
+과거 Run과 결과 행은 stale이어도 삭제하거나 덮어쓰지 않습니다.
+
+### STEP 7 Backtest와 Champion
+
+`core.backtest_run`, `core.model_performance`, `core.champion_model_selection`은 Forecast 실행과 분리된 검증 이력입니다.
+Backtest는 `core.forecast_result + core.v_test_actual`만 사용합니다. Bias는 `Forecast - Actual`이며 양수는 과대예측입니다.
+WAPE 분모가 0이거나 비교 행이 없으면 null과 reason code를 저장합니다. 최신 Champion은 `analytics.v_champion_model`에서 조회하며,
+수동 변경은 append-only 이력과 `core.audit_log`를 함께 남깁니다.
 
 ---
 
@@ -156,16 +189,10 @@ v_inbound_qty            진행 중 선적 = 입고예정
 | item_master | 23 | 품목 20개 + 표기 오염 2 + 단종 1 |
 | purchase_order | 92 | 공급업체 표기 25종 |
 | goods_receipt | 81 | |
+| business_event | STEP 3부터 | 프로젝트·반품 등 업무 이벤트 원본 |
+| sales_order | STEP 3부터 | 주문 원본 |
+| item_substitute | STEP 3부터 | 대체 품목 관계 원본 |
 | inventory | 43 | 창고 표기 흔들림 있음 |
-
-STEP 3에서 다음 raw 입력 테이블을 추가하고, 기존 raw 입력 테이블에도
-`batch_id`, `source_type`, `loaded_at`, `source_record_id`를 nullable로 추가했습니다.
-
-| 테이블 | 용도 |
-|---|---|
-| business_event | 프로젝트·프로모션 등 업무 이벤트 원본 |
-| sales_order | 판매 주문 원본 |
-| item_substitute | 대체 품목 관계 원본 |
 
 `shipment_log` 타임스탬프 순서:
 
@@ -175,6 +202,9 @@ order_date → supplier_ship_date → port_departure_date → port_arrival_date
 ```
 
 **리드타임의 끝점은 `qc_release_date`** 입니다. 창고에 도착해도 검수 전이면 쓸 수 없습니다.
+
+모든 raw 입력 테이블은 STEP 3부터 `batch_id`, `source_type`, `loaded_at`, `source_record_id`를 공통 적재 추적 열로 사용한다.
+기존 행은 이 열이 null일 수 있으며, 원본 데이터를 0 또는 임의값으로 바꾸지 않는다.
 
 ---
 

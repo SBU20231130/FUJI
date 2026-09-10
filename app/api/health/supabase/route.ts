@@ -7,9 +7,5 @@ export async function GET() {
     return NextResponse.json({ configured: false, message: 'Supabase environment variables are missing.' }, { status: 503 });
   }
 
-  return NextResponse.json({
-    configured: true,
-    auth: 'cookie-session',
-    analyticsAccess: 'authenticated-only',
-  });
+  return NextResponse.json({ configured: true, message: 'Supabase environment is configured.' });
 }

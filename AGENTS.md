@@ -41,6 +41,17 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY  publishable 키 (sb_publishable_…)
 - Supabase 가 2025년에 키 체계를 바꿨습니다. 예전 `anon` 키는 publishable 키로 대체되었고,
   2025년 11월 이후 생성된 프로젝트에는 `anon` 이 없습니다.
 
+
+AI Agent(STEP 16)를 켤 때만 필요한 값입니다. 서버에서만 읽습니다.
+
+```
+OPENAI_BASE_URL   OpenAI 호환 주소 (기본 https://api.openai.com/v1)
+OPENAI_API_KEY    secret. NEXT_PUBLIC_ 접두어를 붙이지 않습니다
+OPENAI_MODEL      모델 이름
+```
+
+- 셋 중 하나라도 비면 `/agent` 만 안내를 보이고 나머지 화면은 그대로 동작합니다.
+
 ## 코드 구조
 
 새 분석 화면을 만들 때 이 순서를 따릅니다.
@@ -130,6 +141,16 @@ reason?: 'NO_USAGE' | 'NO_LEADTIME';
 
 ---
 
+### 9. AI Agent 는 기존 조회 함수를 감싸기만 한다
+
+`lib/agent/` 는 계산하지 않고 DB 도 부르지 않습니다(대화 저장 `conversation.ts` 한 곳만 예외).
+Tool 은 화면이 쓰는 것과 **같은 `lib/scm.ts` 함수**를 부릅니다. 두 경로에서 다른 숫자가 나오면
+"AI 가 말한 값" 과 "화면에 뜬 값" 중 어느 쪽도 믿을 수 없게 됩니다.
+
+- 아직 없는 데이터를 읽는 Tool 을 미리 만들지 않습니다. 데이터 기능 → 검증된 함수 → Tool 노출 순서입니다.
+- 툴이 돌려주는 모든 수치는 `numbers` 에 담습니다. 담기지 않은 값을 답변이 인용하면 Guardrail 이 답을 버립니다.
+- 역할 검사는 두 번입니다 — 목록에서 숨기고, 실행 직전에 다시 확인합니다. 숨기기만으로는 보안이 아닙니다.
+
 ## 검증하는 법
 
 코드를 못 읽어도 결과는 확인할 수 있습니다.
@@ -145,10 +166,14 @@ reason?: 'NO_USAGE' | 'NO_LEADTIME';
 
 ## 자주 나는 오류
 
-| 증상 | 원인 | 해결 |
-|---|---|---|
-| 환경변수 오류 | `.env.local` 미설정 | `.env.local.example` 복사 후 값 입력 |
-| `relation ... does not exist` | 스키마 미지정 | `.schema('analytics')` 사용 |
-| 데이터가 빈 배열 | 스키마 미노출 | Settings → API → Exposed schemas 에 `core`, `analytics` 추가 |
-| 설정을 고쳤는데 그대로 | dev 서버 캐시 | `Ctrl+C` 후 `npm run dev` |
-| 화면이 갱신 안 됨 | 페이지 캐시 | `export const dynamic = 'force-dynamic'` 추가 |
+| 증상                          | 원인                | 해결                                                         |
+| ----------------------------- | ------------------- | ------------------------------------------------------------ |
+| 환경변수 오류                 | `.env.local` 미설정 | `.env.local.example` 복사 후 값 입력                         |
+| `relation ... does not exist` | 스키마 미지정       | `.schema('analytics')` 사용                                  |
+| 데이터가 빈 배열              | 스키마 미노출       | Settings → API → Exposed schemas 에 `core`, `analytics` 추가 |
+| 설정을 고쳤는데 그대로        | dev 서버 캐시       | `Ctrl+C` 후 `npm run dev`                                    |
+| 화면이 갱신 안 됨             | 페이지 캐시         | `export const dynamic = 'force-dynamic'` 추가                |
+
+사용자가 에러가 나서 해결해달라고 요청할때에 error.md 파일을 만들어서, 매번 그 에러와 해결책을 기재하고 업데이트해줘.
+
+에러가 발생하면 먼저, error.md 을 확인해서, 동일한 에러, 유사한 에러가 있었는지 확인하고, 그 해결책을 고려해서 적용 후, 안되는 경우, 새로운 방법을 찾아줘.

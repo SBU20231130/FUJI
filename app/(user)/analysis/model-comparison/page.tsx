@@ -1,71 +1,61 @@
 import AnalysisFrame from '@/components/analysis/analysis-frame';
-import ModelComparisonView from '@/components/analysis/model-comparison-view';
-import EmptyValue from '@/components/ui/empty-value';
-import Panel from '@/components/ui/panel';
-import { requireUser } from '@/lib/auth';
-import { getBacktestRuns, getCurrentChampions, getForecastRuns, getModelComparison, getModelPerformance } from '@/lib/scm';
+import OlAccuracyTable from '@/components/analysis/ol-accuracy-table';
+import DataTable, { type Column } from '@/components/ui/data-table';
+import { getOlAccuracy, getOlAccuracyFy } from '@/lib/scm';
+import type { OlAccuracyFy } from '@/lib/scm-model';
 
 export const dynamic = 'force-dynamic';
 
-type SearchParams = {
-  forecastRunId?: string;
-  itemId?: string;
-  from?: string;
-  to?: string;
-};
+const TITLE = 'OL 예측 정확도';
+const DESCRIPTION = '영업 OL 과 SCM OL 이 실적을 얼마나 맞혔는지 비교합니다. Bias 가 양수면 과대예측입니다.';
 
-export default async function ModelComparisonPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
-  await requireUser('/analysis/model-comparison');
-  const params = searchParams ? await searchParams : {};
-  const [forecastRunsResult, backtestRunsResult, championsResult] = await Promise.all([
-    getForecastRuns(),
-    getBacktestRuns(),
-    getCurrentChampions(),
-  ]);
-  const forecastRunId = params.forecastRunId || forecastRunsResult.rows[0]?.forecastRunId || '';
-  const comparisonResult = await getModelComparison({ forecastRunId, from: params.from, to: params.to });
-  const itemIds = Array.from(new Set(comparisonResult.rows.map((row) => row.itemId)));
-  const itemId = params.itemId && itemIds.includes(params.itemId) ? params.itemId : itemIds[0] || '';
-  const points = comparisonResult.rows.filter((row) => row.itemId === itemId);
-  const selectedBacktest = backtestRunsResult.rows.find((row) => row.forecastRunId === forecastRunId && row.status === 'COMPLETED');
-  const performanceResult = selectedBacktest ? await getModelPerformance(selectedBacktest.backtestRunId) : { rows: [], error: null };
-  const error = forecastRunsResult.error ?? backtestRunsResult.error ?? championsResult.error ?? comparisonResult.error ?? performanceResult.error;
-  const exportQuery = new URLSearchParams();
-  if (forecastRunId) exportQuery.set('forecastRunId', forecastRunId);
-  if (itemId) exportQuery.set('itemId', itemId);
-  if (params.from) exportQuery.set('from', params.from);
-  if (params.to) exportQuery.set('to', params.to);
+function percent(value: number | null) {
+  return value === null ? '—' : `${(value * 100).toFixed(1)}%`;
+}
+
+function signedPercent(value: number | null) {
+  if (value === null) return <span className="muted">—</span>;
+  const tone = value > 0 ? 'text-danger' : 'text-good';
+  return <span className={tone}>{value > 0 ? '+' : ''}{(value * 100).toFixed(1)}%</span>;
+}
+
+const fyColumns: Column<OlAccuracyFy>[] = [
+  { key: 'fySheet', label: '회계연도' },
+  { key: 'nScored', label: '채점 행수', align: 'right', render: (row) => row.nScored.toLocaleString('ko-KR') },
+  { key: 'salesWape', label: '영업 WAPE', align: 'right', render: (row) => percent(row.salesWape) },
+  { key: 'scmWape', label: 'SCM WAPE', align: 'right', render: (row) => percent(row.scmWape) },
+  { key: 'salesBias', label: '영업 Bias', align: 'right', render: (row) => signedPercent(row.salesBias) },
+  { key: 'scmBias', label: 'SCM Bias', align: 'right', render: (row) => signedPercent(row.scmBias) },
+];
+
+export default async function ModelComparisonPage() {
+  const [{ rows, error }, { rows: fyRows, error: fyError }] = await Promise.all([getOlAccuracy(), getOlAccuracyFy()]);
+  const failure = error ?? fyError;
+
+  if (failure) {
+    return (
+      <AnalysisFrame title={TITLE} description={DESCRIPTION}>
+        <div className="card">
+          <p className="text-danger">조회에 실패했습니다.</p>
+          <p className="muted">{failure}</p>
+        </div>
+      </AnalysisFrame>
+    );
+  }
 
   return (
-    <AnalysisFrame title="모델 비교" description="STEP 6에 저장된 Forecast Result와 검증 Actual을 SKU·기간·Forecast Run별로 비교합니다.">
-      {error ? <Panel><p className="text-danger">조회에 실패했습니다.</p><p className="muted">{error}</p></Panel> : null}
-      <form className="model-comparison-filters" method="get">
-        <label>Forecast Run
-          <select name="forecastRunId" defaultValue={forecastRunId}>
-            <option value="">선택하세요</option>
-            {forecastRunsResult.rows.map((run) => <option key={run.forecastRunId} value={run.forecastRunId}>{run.forecastRunId.slice(0, 8)} · {run.status ?? '상태 미상'}{run.stale ? ' · STALE' : ''}</option>)}
-          </select>
-        </label>
-        <label>SKU
-          <select name="itemId" defaultValue={itemId} disabled={itemIds.length === 0}>
-            <option value="">선택하세요</option>
-            {itemIds.map((value) => <option key={value} value={value}>{value}</option>)}
-          </select>
-        </label>
-        <label>검증 시작
-          <input type="date" name="from" defaultValue={params.from ?? ''} />
-        </label>
-        <label>검증 종료
-          <input type="date" name="to" defaultValue={params.to ?? ''} />
-        </label>
-        <button className="ui-button ui-button--secondary" type="submit">조회</button>
-        {forecastRunId ? <a className="ui-button ui-button--ghost" href={`/api/model-comparison/export?${exportQuery.toString()}`}>CSV 내보내기</a> : null}
-      </form>
-      {!forecastRunId ? (
-        <Panel className="section" title="Forecast Result 대기" description="비교할 저장 결과가 아직 없습니다."><p className="empty-state">STEP 6에서 Forecast Run과 모델별 Forecast Result를 저장하면 이 화면에서 비교할 수 있습니다. <EmptyValue reasonCode="FORECAST_RESULT_NOT_FOUND" /></p></Panel>
-      ) : (
-        <ModelComparisonView points={points} performance={performanceResult.rows} champions={championsResult.rows} />
-      )}
+    <AnalysisFrame title={TITLE} description={DESCRIPTION}>
+      <div className="section card">
+        <div className="card-title">
+          <div>
+            <h3>회계연도 전체</h3>
+            <span>영업 OL · SCM OL 이 모두 있는 행만 채점했습니다.</span>
+          </div>
+        </div>
+        <DataTable columns={fyColumns} rows={fyRows} rowKey={(row) => row.fySheet} empty="채점할 실적이 없습니다." />
+      </div>
+
+      <OlAccuracyTable rows={rows} />
     </AnalysisFrame>
   );
 }

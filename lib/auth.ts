@@ -1,84 +1,77 @@
-import 'server-only';
-
-import type { User } from '@supabase/supabase-js';
 import { redirect } from 'next/navigation';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-
-export type AppRole = 'ADMIN' | 'USER';
+import type { User } from '@supabase/supabase-js';
+import type { AppRole } from './menu';
+import { createSupabaseServerClient } from './supabase/server';
 
 export type AppUser = {
-  user_id: string;
+  userId: string;
   email: string;
   name: string;
   department: string | null;
   role: AppRole;
   active: boolean;
-  last_login_at: string | null;
-  created_at: string;
-  updated_at: string;
+  lastLoginAt: string | null;
 };
 
-export type AuthContext = {
-  user: User;
-  profile: AppUser;
-  role: AppRole;
-};
+export type AuthenticatedUser = { authUser: User; profile: AppUser };
 
-export class ForbiddenError extends Error {
-  readonly code = 'FORBIDDEN';
-
-  constructor(message = '관리자 권한이 필요합니다.') {
+export class AuthorizationError extends Error {
+  readonly status: 401 | 403;
+  constructor(message: string, status: 401 | 403) {
     super(message);
-    this.name = 'ForbiddenError';
+    this.name = 'AuthorizationError';
+    this.status = status;
   }
 }
-
-function safeNextPath(nextPath: string) {
-  return nextPath.startsWith('/') && !nextPath.startsWith('//') ? nextPath : '/';
-}
-
-export function getLoginRedirect(nextPath: string, error?: string) {
-  const params = new URLSearchParams({ next: safeNextPath(nextPath) });
-  if (error) params.set('error', error);
-  return `/login?${params.toString()}`;
-}
-
-async function loadAuthContext(): Promise<{ context: AuthContext | null; reason?: 'UNAUTHENTICATED' | 'INACTIVE' | 'PROFILE_MISSING' }> {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { context: null, reason: 'UNAUTHENTICATED' };
-
-  const { data: profile, error } = await supabase
-    .schema('core')
-    .from('app_user')
-    .select('user_id,email,name,department,role,active,last_login_at,created_at,updated_at')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  if (error || !profile) return { context: null, reason: 'PROFILE_MISSING' };
-  if (!profile.active) return { context: null, reason: 'INACTIVE' };
-
-  const typedProfile = profile as AppUser;
-  return { context: { user, profile: typedProfile, role: typedProfile.role } };
+function normalizeProfile(row: Record<string, unknown>): AppUser {
+  return {
+    userId: String(row.user_id),
+    email: String(row.email ?? ''),
+    name: String(row.name ?? ''),
+    department: row.department ? String(row.department) : null,
+    role: row.role === 'ADMIN' ? 'ADMIN' : 'USER',
+    active: row.active === true,
+    lastLoginAt: row.last_login_at ? String(row.last_login_at) : null,
+  };
 }
 
 export async function getRole(): Promise<AppRole | null> {
-  const { context } = await loadAuthContext();
-  return context?.role ?? null;
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase.schema('core').from('app_user').select('role, active').eq('user_id', user.id).maybeSingle();
+  if (!data || data.active !== true) return null;
+  return data.role === 'ADMIN' ? 'ADMIN' : 'USER';
 }
 
-export async function requireUser(nextPath = '/') {
-  const { context, reason } = await loadAuthContext();
-  if (!context) {
-    redirect(getLoginRedirect(nextPath, reason === 'INACTIVE' ? 'inactive' : undefined));
-  }
-  return context;
+async function readAuthenticatedUser(): Promise<AuthenticatedUser | null> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) return null;
+  const { data, error } = await supabase.schema('core').from('app_user').select('user_id, email, name, department, role, active, last_login_at').eq('user_id', user.id).maybeSingle();
+  if (error || !data || data.active !== true) return null;
+  return { authUser: user, profile: normalizeProfile(data) };
 }
 
-export async function requireAdmin(nextPath = '/admin') {
-  const context = await requireUser(nextPath);
-  if (context.role !== 'ADMIN') throw new ForbiddenError();
-  return context;
+export async function requireUser(): Promise<AuthenticatedUser> {
+  const current = await readAuthenticatedUser();
+  if (!current) redirect('/login');
+  return current;
 }
 
-export { safeNextPath };
+export async function requireAdmin(): Promise<AuthenticatedUser> {
+  const current = await readAuthenticatedUser();
+  if (!current) throw new AuthorizationError('로그인이 필요합니다.', 401);
+  if (current.profile.role !== 'ADMIN') throw new AuthorizationError('관리자 권한이 필요합니다.', 403);
+  return current;
+}
+
+/**
+ * 로그인만 확인합니다. requireUser 와 달리 redirect 하지 않고 던집니다.
+ * API 라우트는 HTML 로 이동시킬 수 없고 상태 코드로 답해야 하기 때문입니다.
+ */
+export async function requireSignedIn(): Promise<AuthenticatedUser> {
+  const current = await readAuthenticatedUser();
+  if (!current) throw new AuthorizationError('로그인이 필요합니다.', 401);
+  return current;
+}

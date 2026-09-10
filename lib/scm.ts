@@ -1,281 +1,116 @@
+// 화면과 Agent 툴이 쓰는 조회 함수 모음.
+//
+// ★ 여기 있는 모든 함수는 analytics 스키마의 뷰만 읽습니다. raw · core 를 직접 읽지
+//   않습니다. 뷰가 업무 규칙을 이미 한 번 적용해 두었기 때문입니다.
+// ★ 예외를 던지지 않습니다. { rows, error } 로 돌려주고 화면이 error 를 그립니다.
+//
+// 2026-09-10 실데이터 이관 — 5회차 더미 뷰(v_sku_demand_profile · v_stockout_risk ·
+// v_leadtime_gap)는 더 이상 읽지 않습니다. 실데이터에는 재고와 리드타임이 없고,
+// 수요 프로파일은 v_item_demand_profile 이 대신합니다 (07-deprecate-and-agent.sql).
+
 import { createSupabaseServerClient } from './supabase';
-import { normalizeBacktestRun, normalizeBomRequirement, normalizeChampionModel, normalizeComparisonPoint, normalizeDemandProfile, normalizeDemandProfileKpi, normalizeDemandProfileRt, normalizeForecastRun, normalizeForecastSettings, normalizeInventoryProjection, normalizeLeadtimeGap, normalizeLeadtimePolicy, normalizeLeadtimePolicyHistory, normalizeModelConfig, normalizeModelPerformance, normalizeOlAccuracy, normalizePartLinkage, normalizePurchaseRecommendation, normalizeSafetyStock, normalizeShipmentTrend, normalizeStockoutKpi, normalizeStockoutRisk, type BacktestRun, type BomRequirement, type ChampionModel, type ComparisonPoint, type DemandProfile, type DemandProfileKpi, type DemandProfileRt, type ForecastRun, type ForecastSettings, type InventoryProjectionRow, type LeadtimeGap, type LeadtimePolicy, type LeadtimePolicyHistory, type ModelConfig, type ModelPerformance, type OlAccuracy, type PartLinkage, type PurchaseRecommendation, type SafetyStock, type ShipmentTrend, type StockoutKpi, type StockoutRisk } from './scm-model';
+import {
+  normalizeBomRequirement,
+  normalizeItemDemandKpi,
+  normalizeItemDemandProfile,
+  normalizeOlAccuracy,
+  normalizeOlAccuracyFy,
+  normalizeShipmentTrend,
+  type BomRequirement,
+  type ItemDemandKpi,
+  type ItemDemandProfile,
+  type OlAccuracy,
+  type OlAccuracyFy,
+  type ShipmentTrend,
+} from './scm-model';
 
-export async function getDemandProfile(): Promise<{ rows: DemandProfile[]; error: string | null }> {
+/** 수요 성격 — Syntetos-Boylan 분류. 6개월 미만은 유형 null + reason_code */
+export async function getItemDemandProfiles(): Promise<{ rows: ItemDemandProfile[]; error: string | null }> {
   try {
     const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.schema('analytics').from('v_sku_demand_profile').select('*').order('item_id', { ascending: true });
+    const { data, error } = await supabase
+      .schema('analytics')
+      .from('v_item_demand_profile')
+      .select('*')
+      .order('item_code');
     if (error) return { rows: [], error: error.message };
-    return { rows: (data ?? []).map((row) => normalizeDemandProfile(row as Record<string, unknown>)), error: null };
+    return { rows: (data ?? []).map((row) => normalizeItemDemandProfile(row as Record<string, unknown>)), error: null };
   } catch (error) {
-    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
+    return { rows: [], error: error instanceof Error ? error.message : '수요 프로파일을 조회하지 못했습니다.' };
   }
 }
 
-export async function getDemandProfileKpi(): Promise<{ data: DemandProfileKpi | null; error: string | null }> {
+/** 품목 구분별 수요 유형 분포 */
+export async function getItemDemandKpi(): Promise<{ rows: ItemDemandKpi[]; error: string | null }> {
   try {
     const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.schema('analytics').from('v_demand_profile_kpi').select('*').maybeSingle();
-    if (error) return { data: null, error: error.message };
-    return { data: normalizeDemandProfileKpi(data as Record<string, unknown> | null), error: null };
-  } catch (error) {
-    return { data: null, error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
-  }
-}
-
-export async function getLeadtimeGap(): Promise<{ rows: LeadtimeGap[]; error: string | null }> {
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.rpc('get_leadtime_gap');
+    const { data, error } = await supabase.schema('analytics').from('v_item_demand_kpi').select('*').order('item_type');
     if (error) return { rows: [], error: error.message };
-    return { rows: (data ?? []).map((row: Record<string, unknown>) => normalizeLeadtimeGap(row)), error: null };
+    return { rows: (data ?? []).map((row) => normalizeItemDemandKpi(row as Record<string, unknown>)), error: null };
   } catch (error) {
-    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
+    return { rows: [], error: error instanceof Error ? error.message : '수요 유형 요약을 조회하지 못했습니다.' };
   }
 }
 
-export async function getLeadtimePolicy(): Promise<{ rows: LeadtimePolicy[]; error: string | null }> {
+/** 출고 추이 — XCN 합산 기준. 이동평균은 0인 달을 포함해 계산된 값입니다 */
+export async function getShipmentTrends(): Promise<{ rows: ShipmentTrend[]; error: string | null }> {
   try {
     const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.schema('analytics').from('v_leadtime_policy').select('*').order('supplier_id').order('item_id');
-    if (error) return { rows: [], error: error.message };
-    return { rows: (data ?? []).map((row) => normalizeLeadtimePolicy(row as Record<string, unknown>)), error: null };
-  } catch (error) {
-    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
-  }
-}
-
-export async function getLeadtimePolicyHistory(): Promise<{ rows: LeadtimePolicyHistory[]; error: string | null }> {
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.schema('analytics').from('v_leadtime_policy_history').select('*').order('changed_at', { ascending: false });
-    if (error) return { rows: [], error: error.message };
-    return { rows: (data ?? []).map((row) => normalizeLeadtimePolicyHistory(row as Record<string, unknown>)), error: null };
-  } catch (error) {
-    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
-  }
-}
-
-export async function getStockoutKpi(): Promise<{ data: StockoutKpi | null; error: string | null }> {
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.schema('analytics').from('v_stockout_kpi').select('*').maybeSingle();
-    if (error) return { data: null, error: error.message };
-    return { data: normalizeStockoutKpi(data as Record<string, unknown> | null), error: null };
-  } catch (error) {
-    return { data: null, error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
-  }
-}
-
-export async function getStockoutRisk(itemId?: string): Promise<{ rows: StockoutRisk[]; error: string | null }> {
-  try {
-    const supabase = await createSupabaseServerClient();
-    let query = supabase.schema('analytics').from('v_stockout_risk').select('*').order('item_id');
-    if (itemId) query = query.eq('item_id', itemId);
-    const { data, error } = await query;
-    if (error) return { rows: [], error: error.message };
-    return { rows: (data ?? []).map((row) => normalizeStockoutRisk(row as Record<string, unknown>)), error: null };
-  } catch (error) {
-    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
-  }
-}
-
-export async function getInventoryProjection(itemId?: string): Promise<{ rows: InventoryProjectionRow[]; error: string | null }> {
-  try {
-    const supabase = await createSupabaseServerClient();
-    let query = supabase.schema('analytics').from('v_inventory_projection').select('*').order('item_id').order('period');
-    if (itemId) query = query.eq('item_id', itemId);
-    const { data, error } = await query;
-    if (error) return { rows: [], error: error.message };
-    return { rows: (data ?? []).map((row) => normalizeInventoryProjection(row as Record<string, unknown>)), error: null };
-  } catch (error) {
-    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
-  }
-}
-
-export async function getSafetyStock(itemId?: string): Promise<{ rows: SafetyStock[]; error: string | null }> {
-  try {
-    const supabase = await createSupabaseServerClient();
-    let query = supabase.schema('analytics').from('v_safety_stock').select('*').order('item_id');
-    if (itemId) query = query.eq('item_id', itemId);
-    const { data, error } = await query;
-    if (error) return { rows: [], error: error.message };
-    return { rows: (data ?? []).map((row) => normalizeSafetyStock(row as Record<string, unknown>)), error: null };
-  } catch (error) {
-    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
-  }
-}
-
-export async function getPurchaseRecommendations(itemId?: string): Promise<{ rows: PurchaseRecommendation[]; error: string | null }> {
-  try {
-    const supabase = await createSupabaseServerClient();
-    let query = supabase.schema('analytics').from('v_purchase_recommendation').select('*').order('item_id');
-    if (itemId) query = query.eq('item_id', itemId);
-    const { data, error } = await query;
-    if (error) return { rows: [], error: error.message };
-    return { rows: (data ?? []).map((row) => normalizePurchaseRecommendation(row as Record<string, unknown>)), error: null };
-  } catch (error) {
-    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
-  }
-}
-
-export async function getPurchaseRecommendation(itemId: string): Promise<{ data: PurchaseRecommendation | null; error: string | null }> {
-  const result = await getPurchaseRecommendations(itemId);
-  return { data: result.rows[0] ?? null, error: result.error };
-}
-
-export async function getForecastSettings(): Promise<{ data: ForecastSettings | null; error: string | null }> {
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.schema('analytics').from('v_forecast_settings').select('*').maybeSingle();
-    if (error) return { data: null, error: error.message };
-    return { data: normalizeForecastSettings(data as Record<string, unknown> | null), error: null };
-  } catch (error) {
-    return { data: null, error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
-  }
-}
-
-export async function getForecastRuns(): Promise<{ rows: ForecastRun[]; error: string | null }> {
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.schema('analytics').from('v_forecast_runs').select('*').order('created_at', { ascending: false });
-    if (error) return { rows: [], error: error.message };
-    return { rows: (data ?? []).map((row) => normalizeForecastRun(row as Record<string, unknown>)), error: null };
-  } catch (error) {
-    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
-  }
-}
-
-export async function getModelConfigs(): Promise<{ rows: ModelConfig[]; error: string | null }> {
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.schema('analytics').from('v_model_config').select('*').order('model_id', { ascending: true });
-    if (error) return { rows: [], error: error.message };
-    return { rows: (data ?? []).map((row) => normalizeModelConfig(row as Record<string, unknown>)), error: null };
-  } catch (error) {
-    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
-  }
-}
-
-export async function getBacktestRuns(): Promise<{ rows: BacktestRun[]; error: string | null }> {
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.schema('analytics').from('v_backtest_runs').select('*').order('started_at', { ascending: false });
-    if (error) return { rows: [], error: error.message };
-    return { rows: (data ?? []).map((row) => normalizeBacktestRun(row as Record<string, unknown>)), error: null };
-  } catch (error) {
-    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
-  }
-}
-
-export async function getModelPerformance(backtestRunId?: string): Promise<{ rows: ModelPerformance[]; error: string | null }> {
-  try {
-    const supabase = await createSupabaseServerClient();
-    let query = supabase.schema('analytics').from('v_model_performance').select('*').order('item_id', { ascending: true }).order('rank', { ascending: true, nullsFirst: false });
-    if (backtestRunId) query = query.eq('backtest_run_id', backtestRunId);
-    const { data, error } = await query;
-    if (error) return { rows: [], error: error.message };
-    return { rows: (data ?? []).map((row) => normalizeModelPerformance(row as Record<string, unknown>)), error: null };
-  } catch (error) {
-    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
-  }
-}
-
-export async function getCurrentChampions(): Promise<{ rows: ChampionModel[]; error: string | null }> {
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.schema('analytics').from('v_champion_model').select('*').order('item_id', { ascending: true });
-    if (error) return { rows: [], error: error.message };
-    return { rows: (data ?? []).map((row) => normalizeChampionModel(row as Record<string, unknown>)), error: null };
-  } catch (error) {
-    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
-  }
-}
-
-export async function getModelComparison({ forecastRunId, itemId, from, to }: { forecastRunId: string; itemId?: string; from?: string; to?: string }): Promise<{ rows: ComparisonPoint[]; error: string | null }> {
-  if (!forecastRunId) return { rows: [], error: null };
-  try {
-    const supabase = await createSupabaseServerClient();
-    let query = supabase.schema('analytics').from('v_model_comparison').select('*').eq('forecast_run_id', forecastRunId).order('forecast_date', { ascending: true }).order('model_id', { ascending: true });
-    if (itemId) query = query.eq('item_id', itemId);
-    if (from) query = query.gte('forecast_date', from);
-    if (to) query = query.lte('forecast_date', to);
-    const { data, error } = await query;
-    if (error) return { rows: [], error: error.message };
-    return { rows: (data ?? []).map((row) => normalizeComparisonPoint(row as Record<string, unknown>)), error: null };
-  } catch (error) {
-    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
-  }
-}
-
-export async function getShipmentTrend(itemCode?: string): Promise<{ rows: ShipmentTrend[]; error: string | null }> {
-  try {
-    const supabase = await createSupabaseServerClient();
-    let query = supabase.schema('analytics').from('v_shipment_trend').select('*').order('item_code').order('period');
-    if (itemCode) query = query.eq('item_code', itemCode);
-    const { data, error } = await query;
+    const { data, error } = await supabase
+      .schema('analytics')
+      .from('v_shipment_trend')
+      .select('*')
+      .order('total_qty', { ascending: false, nullsFirst: false });
     if (error) return { rows: [], error: error.message };
     return { rows: (data ?? []).map((row) => normalizeShipmentTrend(row as Record<string, unknown>)), error: null };
   } catch (error) {
-    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
+    return { rows: [], error: error instanceof Error ? error.message : '출고 추이를 조회하지 못했습니다.' };
   }
 }
 
-export async function getDemandProfileRt(itemCode?: string): Promise<{ rows: DemandProfileRt[]; error: string | null }> {
+/** OL 예측 정확도 — 기종 × 회계연도 */
+export async function getOlAccuracy(): Promise<{ rows: OlAccuracy[]; error: string | null }> {
   try {
     const supabase = await createSupabaseServerClient();
-    let query = supabase.schema('analytics').from('v_item_demand_profile').select('*').order('item_code');
-    if (itemCode) query = query.eq('item_code', itemCode);
-    const { data, error } = await query;
+    const { data, error } = await supabase
+      .schema('analytics')
+      .from('v_ol_accuracy')
+      .select('*')
+      .order('fy_sheet')
+      .order('model_base');
     if (error) return { rows: [], error: error.message };
-    return { rows: (data ?? []).map((row) => normalizeDemandProfileRt(row as Record<string, unknown>)), error: null };
+    return { rows: (data ?? []).map((row) => normalizeOlAccuracy(row as Record<string, unknown>)), error: null };
   } catch (error) {
-    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
+    return { rows: [], error: error instanceof Error ? error.message : 'OL 정확도를 조회하지 못했습니다.' };
   }
 }
 
-export async function getOlAccuracy(modelBase?: string): Promise<{ rows: OlAccuracy[]; error: string | null }> {
+/** OL 예측 정확도 — 회계연도 합 */
+export async function getOlAccuracyFy(): Promise<{ rows: OlAccuracyFy[]; error: string | null }> {
   try {
     const supabase = await createSupabaseServerClient();
-    let monthlyQuery = supabase.schema('analytics').from('v_ol_accuracy').select('*').order('model_base').order('period');
-    let fiscalQuery = supabase.schema('analytics').from('v_ol_accuracy_fy').select('*').order('model_base').order('fiscal_year');
-    if (modelBase) {
-      monthlyQuery = monthlyQuery.eq('model_base', modelBase);
-      fiscalQuery = fiscalQuery.eq('model_base', modelBase);
-    }
-    const [monthlyResult, fiscalResult] = await Promise.all([monthlyQuery, fiscalQuery]);
-    if (monthlyResult.error || fiscalResult.error) {
-      const messages = [monthlyResult.error?.message, fiscalResult.error?.message].filter(Boolean);
-      return { rows: [], error: messages.join(' / ') || 'OL 정확도 조회에 실패했습니다.' };
-    }
-    const rows = [...(monthlyResult.data ?? []), ...(fiscalResult.data ?? [])]
-      .map((row) => normalizeOlAccuracy(row as Record<string, unknown>));
-    return { rows, error: null };
+    const { data, error } = await supabase.schema('analytics').from('v_ol_accuracy_fy').select('*').order('fy_sheet');
+    if (error) return { rows: [], error: error.message };
+    return { rows: (data ?? []).map((row) => normalizeOlAccuracyFy(row as Record<string, unknown>)), error: null };
   } catch (error) {
-    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
+    return { rows: [], error: error instanceof Error ? error.message : 'OL 정확도 요약을 조회하지 못했습니다.' };
   }
 }
 
-export async function getBomRequirement(modelBase: string): Promise<{ rows: BomRequirement[]; error: string | null }> {
-  if (!modelBase) return { rows: [], error: null };
+/** BOM 소요 — 기종 1대를 팔려면 무엇이 몇 개 필요한가 */
+export async function getBomRequirements(modelBase: string): Promise<{ rows: BomRequirement[]; error: string | null }> {
   try {
     const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.schema('analytics').from('v_bom_requirement_x').select('*').eq('model_base', modelBase).order('part_role').order('item_code');
+    const { data, error } = await supabase
+      .schema('analytics')
+      .from('v_bom_requirement_x')
+      .select('*')
+      .eq('model_base', modelBase)
+      .order('part_role')
+      .order('item_code');
     if (error) return { rows: [], error: error.message };
     return { rows: (data ?? []).map((row) => normalizeBomRequirement(row as Record<string, unknown>)), error: null };
   } catch (error) {
-    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
-  }
-}
-
-export async function getPartLinkage(itemCode: string): Promise<{ rows: PartLinkage[]; error: string | null }> {
-  if (!itemCode) return { rows: [], error: null };
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.schema('analytics').from('v_part_linkage').select('*').eq('item_code', itemCode).order('hoc_code').order('model_base');
-    if (error) return { rows: [], error: error.message };
-    return { rows: (data ?? []).map((row) => normalizePartLinkage(row as Record<string, unknown>)), error: null };
-  } catch (error) {
-    return { rows: [], error: error instanceof Error ? error.message : 'Supabase 조회에 실패했습니다.' };
+    return { rows: [], error: error instanceof Error ? error.message : 'BOM 소요를 조회하지 못했습니다.' };
   }
 }

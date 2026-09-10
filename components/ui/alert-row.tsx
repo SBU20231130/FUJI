@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
-import Badge, { type Status } from './badge';
+import type { SystemStatus } from '@/lib/status';
+import Badge from './badge';
 
-export default function AlertRow({ status, title, description, meta }: { status: Status; title: string; description?: string; meta?: ReactNode }) {
-  return <div className="alert-row"><Badge status={status} /><div><p className="alert-row__title">{title}</p>{description ? <p className="alert-row__description">{description}</p> : null}</div>{meta ? <span className="alert-row__meta">{meta}</span> : null}</div>;
+export default function AlertRow({ status, title, children }: { status: SystemStatus; title: string; children?: ReactNode }) {
+  return <div className={`alert-row alert-${status.toLowerCase()}`}><Badge status={status} /><div><strong>{title}</strong>{children ? <p>{children}</p> : null}</div></div>;
 }
+

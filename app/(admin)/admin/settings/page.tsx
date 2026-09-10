@@ -1,8 +1,7 @@
 import PageHeader from '@/components/shell/page-header';
 import Panel from '@/components/ui/panel';
-import { requireAdmin } from '@/lib/auth';
 
-export default async function AdminSettingsPage() {
-  await requireAdmin('/admin/settings');
-  return <section><PageHeader eyebrow="ADMIN SETTINGS" title="시스템 설정" description="SCM 공통 기준과 환경 설정을 관리합니다." /><Panel title="설정 화면 준비 중"><p className="muted">현재는 route와 디자인 기반만 제공합니다.</p></Panel></section>;
+export default function AdminSettingsPage() {
+  return <section className="analysis-page"><PageHeader eyebrow="ADMIN" title="시스템 설정" description="공급망 운영 기준과 화면 설정을 관리합니다." /><Panel title="준비 중"><p className="muted">관리자 기능은 다음 단계에서 연결됩니다.</p></Panel></section>;
 }
+
